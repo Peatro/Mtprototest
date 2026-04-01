@@ -29,6 +29,8 @@ public class ProxyResponseMapper {
                 .port(proxy.getPort())
                 .secret(proxy.getSecret())
                 .status(proxy.getStatus().name())
+                .verificationStatus(proxy.getVerificationStatus().name())
+                .verified(proxy.getVerificationStatus() == com.peatroxd.mtprototest.proxy.enums.ProxyVerificationStatus.VERIFIED)
                 .score(proxy.getScore())
                 .lastLatencyMs(proxy.getLastLatencyMs())
                 .telegramDeepLink(tgLink)

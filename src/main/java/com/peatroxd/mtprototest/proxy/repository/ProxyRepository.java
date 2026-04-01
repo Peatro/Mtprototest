@@ -21,5 +21,5 @@ public interface ProxyRepository extends JpaRepository<ProxyEntity, Long> {
 
     List<ProxyEntity> findTop200ByStatusOrderByIdAsc(ProxyStatus status);
 
-    List<ProxyEntity> findTop50ByStatusOrderByScoreDescLastLatencyMsAsc(ProxyStatus status);
+    List<ProxyEntity> findTop200ByStatusOrderByScoreDescLastLatencyMsAsc(ProxyStatus status);
 }

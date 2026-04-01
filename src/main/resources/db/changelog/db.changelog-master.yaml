@@ -3,3 +3,7 @@ databaseChangeLog:
       file: db/changelog/changes/001-create-proxies.yaml
   - include:
       file: db/changelog/changes/002-alter-proxies-add-source-type-timestamps.yaml
+  - include:
+      file: db/changelog/changes/003-alter-proxies-add-verification-status.yaml
+  - include:
+      file: db/changelog/changes/004-migrate-proxy-verification-status-dead-to-unverified.yaml

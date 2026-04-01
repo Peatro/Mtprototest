@@ -1,0 +1,12 @@
+databaseChangeLog:
+  - changeSet:
+      id: 004-migrate-proxy-verification-status-dead-to-unverified
+      author: codex
+      changes:
+        - update:
+            tableName: proxies
+            columns:
+              - column:
+                  name: verification_status
+                  value: UNVERIFIED
+            where: verification_status = 'DEAD'

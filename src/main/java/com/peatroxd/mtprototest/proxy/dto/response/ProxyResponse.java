@@ -9,6 +9,8 @@ public record ProxyResponse(
         Integer port,
         String secret,
         String status,
+        String verificationStatus,
+        boolean verified,
         Integer score,
         Long lastLatencyMs,
         String telegramDeepLink,

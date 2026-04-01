@@ -28,9 +28,10 @@ public class ProxyCheckScheduler {
             log.info("Starting scheduled proxy check");
             ProxyBatchCheckSummary summary = proxyBatchCheckService.checkNewProxies();
             log.info(
-                    "Scheduled proxy check finished: total={}, alive={}, dead={}",
+                    "Scheduled proxy check finished: total={}, quickOk={}, verified={}, dead={}",
                     summary.totalChecked(),
-                    summary.aliveCount(),
+                    summary.quickOkCount(),
+                    summary.verifiedCount(),
                     summary.deadCount()
             );
         } finally {

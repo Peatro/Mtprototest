@@ -1,0 +1,14 @@
+databaseChangeLog:
+  - changeSet:
+      id: 003-alter-proxies-add-verification-status
+      author: codex
+      changes:
+        - addColumn:
+            tableName: proxies
+            columns:
+              - column:
+                  name: verification_status
+                  type: VARCHAR(50)
+                  defaultValue: UNVERIFIED
+                  constraints:
+                    nullable: false

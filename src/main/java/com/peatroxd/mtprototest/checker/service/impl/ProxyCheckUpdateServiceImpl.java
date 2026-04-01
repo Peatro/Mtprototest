@@ -4,6 +4,7 @@ import com.peatroxd.mtprototest.checker.model.ProxyCheckResult;
 import com.peatroxd.mtprototest.checker.service.ProxyCheckUpdateService;
 import com.peatroxd.mtprototest.proxy.entity.ProxyEntity;
 import com.peatroxd.mtprototest.proxy.enums.ProxyStatus;
+import com.peatroxd.mtprototest.proxy.enums.ProxyVerificationStatus;
 import com.peatroxd.mtprototest.proxy.repository.ProxyRepository;
 import com.peatroxd.mtprototest.scoring.service.ProxyScoringService;
 import lombok.RequiredArgsConstructor;
@@ -26,11 +27,21 @@ public class ProxyCheckUpdateServiceImpl implements ProxyCheckUpdateService {
         if (result.alive()) {
             proxy.setStatus(ProxyStatus.ALIVE);
             proxy.setLastLatencyMs(result.latencyMs());
-            proxy.setScore(proxyScoringService.calculateScore(true, result.latencyMs()));
+            proxy.setVerificationStatus(result.verificationStatus());
+            proxy.setScore(proxyScoringService.calculateScore(
+                    ProxyStatus.ALIVE,
+                    result.verificationStatus(),
+                    result.latencyMs()
+            ));
         } else {
             proxy.setStatus(ProxyStatus.DEAD);
             proxy.setLastLatencyMs(null);
-            proxy.setScore(proxyScoringService.calculateScore(false, result.latencyMs()));
+            proxy.setVerificationStatus(ProxyVerificationStatus.UNVERIFIED);
+            proxy.setScore(proxyScoringService.calculateScore(
+                    ProxyStatus.DEAD,
+                    ProxyVerificationStatus.UNVERIFIED,
+                    result.latencyMs()
+            ));
         }
 
         proxyRepository.save(proxy);
