@@ -14,3 +14,10 @@ spring:
 
   liquibase:
     change-log: classpath:db/changelog/db.changelog-master.yaml
+app:
+  parser:
+    fixed-delay-ms: 43200000
+
+  sources:
+    solispirit:
+      url: https://raw.githubusercontent.com/SoliSpirit/mtproto/master/all_proxies.txt

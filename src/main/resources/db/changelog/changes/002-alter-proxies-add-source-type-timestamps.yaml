@@ -1,0 +1,45 @@
+databaseChangeLog:
+  - changeSet:
+      id: 002-alter-proxies-add-source-type-timestamps
+      author: peatroxd
+      changes:
+        - addColumn:
+            tableName: proxies
+            columns:
+              - column:
+                  name: type
+                  type: VARCHAR(50)
+                  defaultValue: MTPROTO
+                  constraints:
+                    nullable: false
+
+              - column:
+                  name: source
+                  type: VARCHAR(255)
+                  defaultValue: manual
+                  constraints:
+                    nullable: false
+
+              - column:
+                  name: created_at
+                  type: TIMESTAMP
+                  defaultValueComputed: CURRENT_TIMESTAMP
+                  constraints:
+                    nullable: false
+
+              - column:
+                  name: updated_at
+                  type: TIMESTAMP
+                  defaultValueComputed: CURRENT_TIMESTAMP
+                  constraints:
+                    nullable: false
+
+        - addNotNullConstraint:
+            tableName: proxies
+            columnName: secret
+            columnDataType: VARCHAR(255)
+
+        - addUniqueConstraint:
+            tableName: proxies
+            columnNames: host, port, secret, type
+            constraintName: uk_proxy_host_port_secret_type
