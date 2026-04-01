@@ -1,0 +1,500 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MTProto Proxies</title>
+    <style>
+        :root {
+            --bg: #0b1220;
+            --bg-elevated: rgba(16, 24, 40, 0.88);
+            --bg-card: rgba(15, 23, 42, 0.92);
+            --border: rgba(148, 163, 184, 0.16);
+            --text: #e5edf7;
+            --muted: #94a3b8;
+            --green: #22c55e;
+            --green-soft: rgba(34, 197, 94, 0.15);
+            --orange: #f59e0b;
+            --red: #ef4444;
+            --shadow: 0 20px 60px rgba(2, 6, 23, 0.55);
+            --radius: 22px;
+        }
+
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            margin: 0;
+            min-height: 100vh;
+            font-family: "Segoe UI", "SF Pro Display", "Helvetica Neue", sans-serif;
+            color: var(--text);
+            background:
+                radial-gradient(circle at top left, rgba(34, 197, 94, 0.16), transparent 28%),
+                radial-gradient(circle at top right, rgba(56, 189, 248, 0.12), transparent 22%),
+                linear-gradient(180deg, #0b1220 0%, #09101d 100%);
+        }
+
+        body::before {
+            content: "";
+            position: fixed;
+            inset: 0;
+            pointer-events: none;
+            background-image:
+                linear-gradient(rgba(148, 163, 184, 0.04) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(148, 163, 184, 0.04) 1px, transparent 1px);
+            background-size: 32px 32px;
+            mask-image: radial-gradient(circle at center, black 35%, transparent 85%);
+        }
+
+        .shell {
+            width: min(1120px, calc(100% - 32px));
+            margin: 48px auto;
+            padding: 36px;
+            border: 1px solid var(--border);
+            border-radius: 30px;
+            background: var(--bg-elevated);
+            box-shadow: var(--shadow);
+            backdrop-filter: blur(18px);
+        }
+
+        .hero {
+            display: flex;
+            justify-content: space-between;
+            gap: 24px;
+            align-items: flex-end;
+            margin-bottom: 28px;
+        }
+
+        .eyebrow {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            padding: 7px 12px;
+            border-radius: 999px;
+            border: 1px solid rgba(34, 197, 94, 0.28);
+            background: var(--green-soft);
+            color: #b6f2c8;
+            font-size: 12px;
+            letter-spacing: 0.12em;
+            text-transform: uppercase;
+        }
+
+        h1 {
+            margin: 14px 0 10px;
+            font-size: clamp(32px, 5vw, 56px);
+            line-height: 0.98;
+            letter-spacing: -0.04em;
+        }
+
+        .subtitle {
+            margin: 0;
+            max-width: 680px;
+            color: var(--muted);
+            font-size: 15px;
+            line-height: 1.7;
+        }
+
+        .meta {
+            min-width: 180px;
+            padding: 18px 20px;
+            border: 1px solid var(--border);
+            border-radius: 18px;
+            background: rgba(15, 23, 42, 0.74);
+        }
+
+        .meta-label {
+            color: var(--muted);
+            font-size: 12px;
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+        }
+
+        .meta-value {
+            margin-top: 8px;
+            font-size: 28px;
+            font-weight: 700;
+        }
+
+        .status-panel {
+            margin-bottom: 26px;
+            padding: 18px 20px;
+            border: 1px solid var(--border);
+            border-radius: 18px;
+            background: rgba(15, 23, 42, 0.6);
+            color: var(--muted);
+            font-size: 15px;
+        }
+
+        .status-panel.error {
+            border-color: rgba(239, 68, 68, 0.32);
+            color: #fecaca;
+            background: rgba(127, 29, 29, 0.16);
+        }
+
+        .grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 18px;
+        }
+
+        .card {
+            position: relative;
+            overflow: hidden;
+            padding: 22px;
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            background:
+                linear-gradient(180deg, rgba(255, 255, 255, 0.02), transparent 40%),
+                var(--bg-card);
+            box-shadow: 0 14px 36px rgba(2, 6, 23, 0.28);
+            transition: transform 180ms ease, border-color 180ms ease, box-shadow 180ms ease;
+        }
+
+        .card:hover {
+            transform: translateY(-4px);
+            border-color: rgba(34, 197, 94, 0.32);
+            box-shadow: 0 22px 46px rgba(2, 6, 23, 0.42);
+        }
+
+        .card::after {
+            content: "";
+            position: absolute;
+            inset: auto -30px -40px auto;
+            width: 140px;
+            height: 140px;
+            border-radius: 50%;
+            background: radial-gradient(circle, rgba(34, 197, 94, 0.18), transparent 68%);
+            pointer-events: none;
+        }
+
+        .card-top {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            gap: 12px;
+            margin-bottom: 18px;
+        }
+
+        .host {
+            margin: 0 0 6px;
+            font-size: 22px;
+            line-height: 1.2;
+            letter-spacing: -0.03em;
+            word-break: break-word;
+        }
+
+        .secret {
+            margin: 0;
+            color: var(--muted);
+            font-size: 13px;
+        }
+
+        .badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            padding: 8px 12px;
+            border-radius: 999px;
+            font-size: 12px;
+            font-weight: 600;
+            letter-spacing: 0.08em;
+            text-transform: uppercase;
+            white-space: nowrap;
+            border: 1px solid transparent;
+        }
+
+        .badge.alive {
+            color: #c7f9d5;
+            background: rgba(34, 197, 94, 0.14);
+            border-color: rgba(34, 197, 94, 0.24);
+        }
+
+        .badge.other {
+            color: #cbd5e1;
+            background: rgba(148, 163, 184, 0.12);
+            border-color: rgba(148, 163, 184, 0.18);
+        }
+
+        .stats {
+            display: grid;
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+            gap: 12px;
+            margin-bottom: 18px;
+        }
+
+        .stat {
+            padding: 14px;
+            border: 1px solid rgba(148, 163, 184, 0.12);
+            border-radius: 16px;
+            background: rgba(2, 6, 23, 0.24);
+        }
+
+        .stat-label {
+            margin-bottom: 8px;
+            color: var(--muted);
+            font-size: 12px;
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+        }
+
+        .stat-value {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            font-size: 20px;
+            font-weight: 700;
+        }
+
+        .latency-dot {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            box-shadow: 0 0 12px currentColor;
+        }
+
+        .latency-green {
+            color: var(--green);
+        }
+
+        .latency-orange {
+            color: var(--orange);
+        }
+
+        .latency-red {
+            color: var(--red);
+        }
+
+        .actions {
+            display: grid;
+            grid-template-columns: repeat(3, minmax(0, 1fr));
+            gap: 10px;
+        }
+
+        .btn {
+            appearance: none;
+            border: 1px solid rgba(148, 163, 184, 0.18);
+            border-radius: 14px;
+            padding: 12px 14px;
+            background: rgba(255, 255, 255, 0.03);
+            color: var(--text);
+            font: inherit;
+            font-size: 13px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: transform 160ms ease, background-color 160ms ease, border-color 160ms ease;
+            text-align: center;
+            text-decoration: none;
+        }
+
+        .btn:hover {
+            transform: translateY(-1px);
+            border-color: rgba(34, 197, 94, 0.32);
+            background: rgba(34, 197, 94, 0.09);
+        }
+
+        .btn.primary {
+            background: linear-gradient(180deg, rgba(34, 197, 94, 0.24), rgba(22, 163, 74, 0.18));
+            border-color: rgba(34, 197, 94, 0.32);
+        }
+
+        .btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        @media (max-width: 760px) {
+            .shell {
+                width: min(100% - 20px, 1120px);
+                margin: 20px auto;
+                padding: 22px;
+                border-radius: 24px;
+            }
+
+            .hero {
+                flex-direction: column;
+                align-items: stretch;
+            }
+
+            .actions {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+<main class="shell">
+    <section class="hero">
+        <div>
+            <div class="eyebrow">Live Feed</div>
+            <h1>MTProto Proxies</h1>
+            <p class="subtitle">
+                Sorted by the backend. Fast access cards with Telegram deep links, web links and one-click copy.
+            </p>
+        </div>
+        <div class="meta">
+            <div class="meta-label">Available</div>
+            <div class="meta-value" id="proxy-count">0</div>
+        </div>
+    </section>
+
+    <section id="status" class="status-panel">Loading proxies...</section>
+    <section id="proxy-grid" class="grid" aria-live="polite"></section>
+</main>
+
+<script>
+    const API_URL = "http://localhost:8080/api/proxies/best";
+    const statusNode = document.getElementById("status");
+    const gridNode = document.getElementById("proxy-grid");
+    const countNode = document.getElementById("proxy-count");
+
+    function escapeHtml(value) {
+        return String(value ?? "")
+            .replaceAll("&", "&amp;")
+            .replaceAll("<", "&lt;")
+            .replaceAll(">", "&gt;")
+            .replaceAll("\"", "&quot;")
+            .replaceAll("'", "&#39;");
+    }
+
+    function latencyClass(latency) {
+        if (latency == null) {
+            return "latency-orange";
+        }
+        if (latency < 100) {
+            return "latency-green";
+        }
+        if (latency <= 300) {
+            return "latency-orange";
+        }
+        return "latency-red";
+    }
+
+    function renderStatus(message, isError = false) {
+        statusNode.textContent = message;
+        statusNode.classList.toggle("error", isError);
+    }
+
+    function proxyCard(proxy) {
+        const hostPort = `${proxy.host}:${proxy.port}`;
+        const score = proxy.score ?? "N/A";
+        const latency = proxy.lastLatencyMs ?? "N/A";
+        const status = proxy.status ?? "UNKNOWN";
+        const badgeClass = status === "ALIVE" ? "alive" : "other";
+        const latencyTone = latencyClass(proxy.lastLatencyMs);
+        const secretPreview = proxy.secret ? `secret: ${proxy.secret}` : "secret unavailable";
+
+        return `
+            <article class="card">
+                <div class="card-top">
+                    <div>
+                        <h2 class="host">${escapeHtml(hostPort)}</h2>
+                        <p class="secret">${escapeHtml(secretPreview)}</p>
+                    </div>
+                    <span class="badge ${badgeClass}">${escapeHtml(status)}</span>
+                </div>
+
+                <div class="stats">
+                    <div class="stat">
+                        <div class="stat-label">Score</div>
+                        <div class="stat-value">${escapeHtml(score)}</div>
+                    </div>
+                    <div class="stat">
+                        <div class="stat-label">Latency</div>
+                        <div class="stat-value ${latencyTone}">
+                            <span class="latency-dot"></span>
+                            <span>${escapeHtml(latency)} ms</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="actions">
+                    <a class="btn primary" href="${escapeHtml(proxy.telegramDeepLink || "#")}">Open in Telegram</a>
+                    <a class="btn" href="${escapeHtml(proxy.telegramWebLink || "#")}" target="_blank" rel="noreferrer">Open via Web</a>
+                    <button class="btn copy-btn" type="button" data-link="${escapeHtml(proxy.telegramDeepLink || "")}">Copy</button>
+                </div>
+            </article>
+        `;
+    }
+
+    async function copyText(value) {
+        if (!value) {
+            return false;
+        }
+
+        if (navigator.clipboard?.writeText) {
+            await navigator.clipboard.writeText(value);
+            return true;
+        }
+
+        const temp = document.createElement("textarea");
+        temp.value = value;
+        document.body.appendChild(temp);
+        temp.select();
+        document.execCommand("copy");
+        temp.remove();
+        return true;
+    }
+
+    function bindCopyButtons() {
+        document.querySelectorAll(".copy-btn").forEach((button) => {
+            button.addEventListener("click", async () => {
+                const originalText = button.textContent;
+                const link = button.dataset.link;
+
+                try {
+                    await copyText(link);
+                    button.textContent = "Copied";
+                    setTimeout(() => {
+                        button.textContent = originalText;
+                    }, 1400);
+                } catch (error) {
+                    button.textContent = "Copy failed";
+                    setTimeout(() => {
+                        button.textContent = originalText;
+                    }, 1600);
+                }
+            });
+        });
+    }
+
+    async function loadProxies() {
+        renderStatus("Loading proxies...");
+
+        try {
+            const response = await fetch(API_URL, {
+                headers: {
+                    "Accept": "application/json"
+                }
+            });
+
+            if (!response.ok) {
+                throw new Error(`API request failed with status ${response.status}`);
+            }
+
+            const proxies = await response.json();
+
+            if (!Array.isArray(proxies) || proxies.length === 0) {
+                countNode.textContent = "0";
+                gridNode.innerHTML = "";
+                renderStatus("No proxies available");
+                return;
+            }
+
+            countNode.textContent = String(proxies.length);
+            gridNode.innerHTML = proxies.map(proxyCard).join("");
+            renderStatus(`Loaded ${proxies.length} proxy cards`);
+            bindCopyButtons();
+        } catch (error) {
+            countNode.textContent = "0";
+            gridNode.innerHTML = "";
+            renderStatus("Failed to load proxies. Check that the backend is running on http://localhost:8080.", true);
+            console.error(error);
+        }
+    }
+
+    loadProxies();
+</script>
+</body>
+</html>
