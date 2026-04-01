@@ -1,3 +1,16 @@
 spring:
   application:
     name: Mtprototest
+
+  datasource:
+    url: jdbc:postgresql://localhost:5432/mtproto_db
+    username: postgres
+    password: postgres
+
+  jpa:
+    hibernate:
+      ddl-auto: validate
+    open-in-view: false
+
+  liquibase:
+    change-log: classpath:db/changelog/db.changelog-master.yaml

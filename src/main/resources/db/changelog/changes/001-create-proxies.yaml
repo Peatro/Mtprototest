@@ -1,0 +1,41 @@
+databaseChangeLog:
+  - changeSet:
+      id: 001
+      author: peatroxd
+      changes:
+        - createTable:
+            tableName: proxies
+            columns:
+              - column:
+                  name: id
+                  type: BIGSERIAL
+                  constraints:
+                    primaryKey: true
+
+              - column:
+                  name: host
+                  type: VARCHAR(255)
+                  constraints:
+                    nullable: false
+
+              - column:
+                  name: port
+                  type: INT
+                  constraints:
+                    nullable: false
+
+              - column:
+                  name: secret
+                  type: VARCHAR(255)
+
+              - column:
+                  name: status
+                  type: VARCHAR(50)
+
+              - column:
+                  name: score
+                  type: INT
+
+              - column:
+                  name: last_latency_ms
+                  type: BIGINT
