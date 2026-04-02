@@ -1,0 +1,92 @@
+package com.peatroxd.mtprototest.proxy.entity;
+
+import com.peatroxd.mtprototest.proxy.enums.ProxyStatus;
+import com.peatroxd.mtprototest.proxy.enums.ProxyType;
+import com.peatroxd.mtprototest.proxy.enums.ProxyVerificationStatus;
+import jakarta.persistence.*;
+import lombok.*;
+
+import java.time.LocalDateTime;
+
+@Entity
+@Table(
+        name = "proxies",
+        uniqueConstraints = {
+                @UniqueConstraint(
+                        name = "uk_proxy_host_port_secret_type",
+                        columnNames = {"host", "port", "secret", "type"}
+                )
+        }
+)
+@Getter
+@Setter
+@NoArgsConstructor
+@AllArgsConstructor
+@Builder
+public class ProxyEntity {
+
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long id;
+
+    @Column(nullable = false)
+    private String host;
+
+    @Column(nullable = false)
+    private Integer port;
+
+    @Column(nullable = false)
+    private String secret;
+
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false)
+    private ProxyStatus status;
+
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false)
+    private ProxyType type;
+
+    @Column(nullable = false)
+    private String source;
+
+    @Column(nullable = false)
+    private Integer score;
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "verification_status", nullable = false)
+    private ProxyVerificationStatus verificationStatus;
+
+    @Column(name = "last_latency_ms")
+    private Long lastLatencyMs;
+
+    @Column(name = "created_at", nullable = false)
+    private LocalDateTime createdAt;
+
+    @Column(name = "updated_at", nullable = false)
+    private LocalDateTime updatedAt;
+
+    @PrePersist
+    public void prePersist() {
+        LocalDateTime now = LocalDateTime.now();
+
+        if (createdAt == null) {
+            createdAt = now;
+        }
+        updatedAt = now;
+
+        if (status == null) {
+            status = ProxyStatus.NEW;
+        }
+        if (score == null) {
+            score = 0;
+        }
+        if (verificationStatus == null) {
+            verificationStatus = ProxyVerificationStatus.UNVERIFIED;
+        }
+    }
+
+    @PreUpdate
+    public void preUpdate() {
+        updatedAt = LocalDateTime.now();
+    }
+}

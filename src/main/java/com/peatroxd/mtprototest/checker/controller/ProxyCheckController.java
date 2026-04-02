@@ -1,0 +1,22 @@
+package com.peatroxd.mtprototest.checker.controller;
+
+import com.peatroxd.mtprototest.checker.service.ProxyBatchCheckService;
+import lombok.RequiredArgsConstructor;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RestController;
+
+@RestController
+@RequestMapping("/api/check")
+@RequiredArgsConstructor
+public class ProxyCheckController {
+
+    private final ProxyBatchCheckService proxyBatchCheckService;
+
+    @PostMapping("/proxies")
+    public ResponseEntity<String> checkProxies() {
+        proxyBatchCheckService.checkNewProxies();
+        return ResponseEntity.ok("NEW proxy check completed");
+    }
+}
