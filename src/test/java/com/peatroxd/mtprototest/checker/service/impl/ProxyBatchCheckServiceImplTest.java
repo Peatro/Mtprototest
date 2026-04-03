@@ -22,6 +22,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor;
 
 import java.util.List;
+import java.util.concurrent.Executor;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
@@ -90,6 +91,49 @@ class ProxyBatchCheckServiceImplTest {
         } finally {
             executor.shutdown();
         }
+    }
+
+    @Test
+    void shouldUseDedicatedStartupBudgetForStartupChecks() {
+        CheckerProperties checkerProperties = new CheckerProperties();
+        checkerProperties.setDeepProbeLimit(5);
+
+        CheckerExecutorProperties executorProperties = new CheckerExecutorProperties();
+        executorProperties.setMaxPoolSize(4);
+        executorProperties.setEffectiveConcurrency(1);
+        executorProperties.setSubmissionWindowSize(1);
+
+        ProxyBatchCheckServiceImpl service = service(executorProperties, checkerProperties, Runnable::run);
+
+        List<ProxyEntity> proxies = List.of(proxy(11L), proxy(12L), proxy(13L));
+
+        when(proxyRepository.findStartupBatch(any())).thenReturn(proxies.subList(0, 2));
+        when(proxyCheckExecutionService.execute(any(ProxyEntity.class), eq(true))).thenAnswer(invocation -> execution());
+        when(proxyCheckExecutionService.execute(any(ProxyEntity.class), eq(false))).thenAnswer(invocation -> execution());
+
+        ProxyBatchCheckSummary summary = service.checkStartupProxies(2, 1);
+
+        assertThat(summary.totalChecked()).isEqualTo(2);
+        verify(proxyRepository).findStartupBatch(any());
+        verify(proxyCheckExecutionService, times(1)).execute(any(ProxyEntity.class), eq(true));
+        verify(proxyCheckExecutionService, times(1)).execute(any(ProxyEntity.class), eq(false));
+    }
+
+    private ProxyBatchCheckServiceImpl service(
+            CheckerExecutorProperties executorProperties,
+            CheckerProperties checkerProperties,
+            Executor executor
+    ) {
+        return new ProxyBatchCheckServiceImpl(
+                proxyRepository,
+                proxyCheckExecutionService,
+                proxyCheckUpdateService,
+                executor,
+                executorProperties,
+                checkerProperties,
+                proxyMetricsService,
+                publicCatalogCacheService
+        );
     }
 
     private ProxyCheckExecution execution() {

@@ -39,6 +39,26 @@ public interface ProxyRepository extends JpaRepository<ProxyEntity, Long>, JpaSp
 
     @Query("""
             select p from ProxyEntity p
+            where p.status <> com.peatroxd.mtprototest.proxy.enums.ProxyStatus.ARCHIVED
+              and p.moderationStatus <> com.peatroxd.mtprototest.proxy.enums.ProxyModerationStatus.BLACKLISTED
+            order by
+              case
+                when p.status = com.peatroxd.mtprototest.proxy.enums.ProxyStatus.NEW then 0
+                when p.status = com.peatroxd.mtprototest.proxy.enums.ProxyStatus.ALIVE
+                     and p.verificationStatus = com.peatroxd.mtprototest.proxy.enums.ProxyVerificationStatus.QUICK_OK then 1
+                when p.status = com.peatroxd.mtprototest.proxy.enums.ProxyStatus.ALIVE
+                     and p.verificationStatus = com.peatroxd.mtprototest.proxy.enums.ProxyVerificationStatus.VERIFIED then 2
+                when p.status = com.peatroxd.mtprototest.proxy.enums.ProxyStatus.DEAD then 3
+                else 4
+              end,
+              p.lastCheckedAt asc nulls first,
+              p.score desc,
+              p.id asc
+            """)
+    List<ProxyEntity> findStartupBatch(Pageable pageable);
+
+    @Query("""
+            select p from ProxyEntity p
             where p.status = :status
               and p.moderationStatus <> com.peatroxd.mtprototest.proxy.enums.ProxyModerationStatus.BLACKLISTED
             order by p.createdAt asc, p.id asc

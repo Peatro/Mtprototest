@@ -30,6 +30,8 @@ springdoc:
 app:
   startup:
     bootstrap-enabled: true
+    check-batch-size: 120
+    deep-probe-limit: 10
 
   parser:
     initial-delay-ms: 43200000
@@ -47,6 +49,8 @@ app:
       core-pool-size: 16
       max-pool-size: 32
       queue-capacity: 200
+      effective-concurrency: 24
+      submission-window-size: 24
       await-termination-seconds: 30
       thread-name-prefix: proxy-checker-
 
