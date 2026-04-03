@@ -7,8 +7,10 @@ import com.peatroxd.mtprototest.proxy.enums.ProxyVerificationStatus;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
+import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.stereotype.Repository;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
 import java.util.List;
@@ -64,4 +66,26 @@ public interface ProxyRepository extends JpaRepository<ProxyEntity, Long>, JpaSp
     long countByStatus(ProxyStatus status);
 
     long countByVerificationStatus(ProxyVerificationStatus verificationStatus);
+
+    @Modifying
+    @Transactional
+    @Query("""
+            update ProxyEntity p
+               set p.status = :archivedStatus,
+                   p.updatedAt = :updatedAt
+             where p.status = :deadStatus
+               and p.consecutiveFailures >= :minConsecutiveFailures
+               and (
+                    (p.lastSuccessAt is not null and p.lastSuccessAt <= :staleBefore)
+                    or
+                    (p.lastSuccessAt is null and p.createdAt <= :staleBefore)
+               )
+            """)
+    int archiveDeadProxies(
+            ProxyStatus deadStatus,
+            ProxyStatus archivedStatus,
+            int minConsecutiveFailures,
+            LocalDateTime staleBefore,
+            LocalDateTime updatedAt
+    );
 }
