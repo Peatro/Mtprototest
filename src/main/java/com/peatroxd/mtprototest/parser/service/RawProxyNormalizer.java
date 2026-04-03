@@ -1,6 +1,8 @@
 package com.peatroxd.mtprototest.parser.service;
 
 import com.peatroxd.mtprototest.parser.model.RawProxy;
+import com.peatroxd.mtprototest.parser.model.RawProxyNormalizationResult;
+import com.peatroxd.mtprototest.parser.model.RawProxyRejectReason;
 import com.peatroxd.mtprototest.proxy.enums.ProxyType;
 import org.springframework.stereotype.Component;
 
@@ -11,8 +13,13 @@ import java.util.Optional;
 public class RawProxyNormalizer {
 
     public Optional<RawProxy> normalize(RawProxy rawProxy) {
+        RawProxyNormalizationResult result = normalizeWithReason(rawProxy);
+        return result.accepted() ? Optional.of(result.proxy()) : Optional.empty();
+    }
+
+    public RawProxyNormalizationResult normalizeWithReason(RawProxy rawProxy) {
         if (rawProxy == null) {
-            return Optional.empty();
+            return RawProxyNormalizationResult.rejected(RawProxyRejectReason.NULL_INPUT);
         }
 
         String host = normalizeHost(rawProxy.host());
@@ -20,26 +27,24 @@ public class RawProxyNormalizer {
         String secret = normalizeSecret(rawProxy.secret());
 
         if (host == null || host.isBlank()) {
-            return Optional.empty();
+            return RawProxyNormalizationResult.rejected(RawProxyRejectReason.EMPTY_HOST);
         }
 
         if (port == null || port < 1 || port > 65535) {
-            return Optional.empty();
+            return RawProxyNormalizationResult.rejected(RawProxyRejectReason.INVALID_PORT);
         }
 
         if (rawProxy.type() == ProxyType.MTPROTO && (secret == null || secret.isBlank())) {
-            return Optional.empty();
+            return RawProxyNormalizationResult.rejected(RawProxyRejectReason.EMPTY_SECRET);
         }
 
-        return Optional.of(
-                RawProxy.builder()
-                        .host(host)
-                        .port(port)
-                        .secret(secret)
-                        .type(rawProxy.type())
-                        .source(rawProxy.source())
-                        .build()
-        );
+        return RawProxyNormalizationResult.accepted(RawProxy.builder()
+                .host(host)
+                .port(port)
+                .secret(secret)
+                .type(rawProxy.type())
+                .source(rawProxy.source())
+                .build());
     }
 
     private String normalizeHost(String host) {

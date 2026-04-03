@@ -1,6 +1,7 @@
 package com.peatroxd.mtprototest.parser.service;
 
 import com.peatroxd.mtprototest.parser.model.RawProxy;
+import com.peatroxd.mtprototest.parser.model.RawProxyRejectReason;
 import com.peatroxd.mtprototest.proxy.enums.ProxyType;
 import org.junit.jupiter.api.Test;
 
@@ -80,6 +81,22 @@ class RawProxyNormalizerTest {
     }
 
     @Test
+    void shouldExposeInvalidPortRejectReason() {
+        RawProxy rawProxy = RawProxy.builder()
+                .host("example.com")
+                .port(70000)
+                .secret("secret")
+                .type(ProxyType.MTPROTO)
+                .source("test")
+                .build();
+
+        var result = normalizer.normalizeWithReason(rawProxy);
+
+        assertThat(result.accepted()).isFalse();
+        assertThat(result.rejectReason()).isEqualTo(RawProxyRejectReason.INVALID_PORT);
+    }
+
+    @Test
     void shouldRejectMtprotoWithoutSecret() {
         RawProxy rawProxy = RawProxy.builder()
                 .host("example.com")
@@ -90,5 +107,45 @@ class RawProxyNormalizerTest {
                 .build();
 
         assertThat(normalizer.normalize(rawProxy)).isEmpty();
+    }
+
+    @Test
+    void shouldExposeEmptySecretRejectReason() {
+        RawProxy rawProxy = RawProxy.builder()
+                .host("example.com")
+                .port(443)
+                .secret(" ")
+                .type(ProxyType.MTPROTO)
+                .source("test")
+                .build();
+
+        var result = normalizer.normalizeWithReason(rawProxy);
+
+        assertThat(result.accepted()).isFalse();
+        assertThat(result.rejectReason()).isEqualTo(RawProxyRejectReason.EMPTY_SECRET);
+    }
+
+    @Test
+    void shouldExposeEmptyHostRejectReason() {
+        RawProxy rawProxy = RawProxy.builder()
+                .host(" . ")
+                .port(443)
+                .secret("abcdef")
+                .type(ProxyType.MTPROTO)
+                .source("test")
+                .build();
+
+        var result = normalizer.normalizeWithReason(rawProxy);
+
+        assertThat(result.accepted()).isFalse();
+        assertThat(result.rejectReason()).isEqualTo(RawProxyRejectReason.EMPTY_HOST);
+    }
+
+    @Test
+    void shouldExposeNullInputRejectReason() {
+        var result = normalizer.normalizeWithReason(null);
+
+        assertThat(result.accepted()).isFalse();
+        assertThat(result.rejectReason()).isEqualTo(RawProxyRejectReason.NULL_INPUT);
     }
 }

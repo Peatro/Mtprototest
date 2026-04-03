@@ -1,6 +1,7 @@
 package com.peatroxd.mtprototest.common.metrics;
 
 import com.peatroxd.mtprototest.checker.model.MtProtoProbeFailureCode;
+import com.peatroxd.mtprototest.parser.model.RawProxyRejectReason;
 import io.micrometer.core.instrument.Counter;
 import io.micrometer.core.instrument.MeterRegistry;
 import org.springframework.stereotype.Component;
@@ -47,6 +48,16 @@ public class ProxyMetricsService {
         }
     }
 
+    public void incrementSourceRejectedByReason(String sourceName, RawProxyRejectReason rejectReason, int rejectedCount) {
+        if (rejectedCount > 0) {
+            meterRegistry.counter(
+                    "proxy.import.rejected.by_source_reason.total",
+                    "source", normalizeSourceTag(sourceName),
+                    "reason", normalizeRejectReasonTag(rejectReason)
+            ).increment(rejectedCount);
+        }
+    }
+
     public void incrementSourceFailure(String sourceName) {
         meterRegistry.counter("proxy.import.failure.by_source.total", "source", normalizeSourceTag(sourceName))
                 .increment();
@@ -71,5 +82,9 @@ public class ProxyMetricsService {
 
     private String normalizeSourceTag(String sourceName) {
         return sourceName != null && !sourceName.isBlank() ? sourceName : "unknown";
+    }
+
+    private String normalizeRejectReasonTag(RawProxyRejectReason rejectReason) {
+        return rejectReason != null ? rejectReason.name() : "UNKNOWN";
     }
 }

@@ -4,6 +4,8 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.peatroxd.mtprototest.common.metrics.ProxyMetricsService;
 import com.peatroxd.mtprototest.parser.config.ParserSourcesProperties;
 import com.peatroxd.mtprototest.parser.model.RawProxy;
+import com.peatroxd.mtprototest.parser.model.RawProxyNormalizationResult;
+import com.peatroxd.mtprototest.parser.model.RawProxyRejectReason;
 import com.peatroxd.mtprototest.proxy.entity.ProxyEntity;
 import com.peatroxd.mtprototest.proxy.enums.ProxyStatus;
 import com.peatroxd.mtprototest.proxy.repository.ProxyRepository;
@@ -16,6 +18,9 @@ import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestClient;
 
 import java.util.List;
+import java.util.Map;
+import java.util.function.Function;
+import java.util.stream.Collectors;
 
 @Slf4j
 @Service
@@ -53,14 +58,19 @@ public class ProxyImportService {
         int imported = 0;
         int skipped = 0;
         int rejected = 0;
+        Map<RawProxyRejectReason, Integer> rejectedByReason = java.util.Arrays.stream(RawProxyRejectReason.values())
+                .collect(Collectors.toMap(Function.identity(), reason -> 0));
 
         for (RawProxy rawProxy : rawProxies) {
-            RawProxy normalized = rawProxyNormalizer.normalize(rawProxy).orElse(null);
-            if (normalized == null) {
+            RawProxyNormalizationResult normalizationResult = rawProxyNormalizer.normalizeWithReason(rawProxy);
+            if (!normalizationResult.accepted()) {
                 rejected++;
+                RawProxyRejectReason rejectReason = normalizationResult.rejectReason();
+                rejectedByReason.computeIfPresent(rejectReason, (ignored, count) -> count + 1);
                 continue;
             }
 
+            RawProxy normalized = normalizationResult.proxy();
             if (exists(normalized)) {
                 skipped++;
                 continue;
@@ -82,6 +92,12 @@ public class ProxyImportService {
         proxyMetricsService.incrementSourceImported(source.sourceName(), imported);
         proxyMetricsService.incrementSourceSkipped(source.sourceName(), skipped);
         proxyMetricsService.incrementSourceRejected(source.sourceName(), rejected);
+        rejectedByReason.forEach((reason, count) ->
+                proxyMetricsService.incrementSourceRejectedByReason(source.sourceName(), reason, count)
+        );
+        if (rejected > 0) {
+            log.info("Import rejected breakdown for source='{}': {}", source.sourceName(), rejectedByReason);
+        }
     }
 
     private List<ProxySource> configuredSources() {
