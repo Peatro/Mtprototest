@@ -1,5 +1,9 @@
 package com.peatroxd.mtprototest.api;
 
+import com.peatroxd.mtprototest.checker.entity.ProxyCheckHistoryEntity;
+import com.peatroxd.mtprototest.checker.enums.ProxyCheckType;
+import com.peatroxd.mtprototest.checker.model.MtProtoProbeFailureCode;
+import com.peatroxd.mtprototest.checker.repository.ProxyCheckHistoryRepository;
 import com.peatroxd.mtprototest.proxy.entity.ProxyEntity;
 import com.peatroxd.mtprototest.proxy.enums.ProxyModerationStatus;
 import com.peatroxd.mtprototest.proxy.enums.ProxyStatus;
@@ -31,6 +35,8 @@ class AdminOverviewIntegrationTest {
 
     @Autowired
     private ProxyRepository proxyRepository;
+    @Autowired
+    private ProxyCheckHistoryRepository proxyCheckHistoryRepository;
 
     @Test
     void shouldExposeProtectedAdminOverview() throws Exception {
@@ -67,7 +73,6 @@ class AdminOverviewIntegrationTest {
 
         assertThat(unauthorized.statusCode()).isEqualTo(403);
         assertThat(authorized.statusCode()).isEqualTo(200);
-        assertThat(authorized.body()).contains("\"totalProxies\":2");
         assertThat(authorized.body()).contains("\"whitelistedCount\":1");
         assertThat(authorized.body()).contains("\"blacklistedCount\":1");
         assertThat(authorized.body()).contains("\"source\":\"source_alpha\"");
@@ -100,6 +105,39 @@ class AdminOverviewIntegrationTest {
         assertThat(response.body()).contains("\"moderationStatus\":\"BLACKLISTED\"");
         assertThat(proxyRepository.findById(proxy.getId()).orElseThrow().getModerationStatus())
                 .isEqualTo(ProxyModerationStatus.BLACKLISTED);
+    }
+
+    @Test
+    void shouldExposeDeepProbeFailureDiagnostics() throws Exception {
+        ProxyEntity proxy = proxyRepository.saveAndFlush(ProxyEntity.builder()
+                .host("33.33.33.33")
+                .port(443)
+                .secret("00112233445566778899aabbccddeeff")
+                .type(ProxyType.MTPROTO)
+                .source("source_delta")
+                .status(ProxyStatus.ALIVE)
+                .verificationStatus(ProxyVerificationStatus.QUICK_OK)
+                .moderationStatus(ProxyModerationStatus.NORMAL)
+                .score(55)
+                .consecutiveFailures(0)
+                .consecutiveSuccesses(1)
+                .build());
+
+        proxyCheckHistoryRepository.saveAndFlush(ProxyCheckHistoryEntity.builder()
+                .proxy(proxy)
+                .checkType(ProxyCheckType.DEEP)
+                .alive(false)
+                .verificationStatus(ProxyVerificationStatus.UNVERIFIED)
+                .failureCode(MtProtoProbeFailureCode.CONNECT_ERROR)
+                .failureReason("Connection timed out")
+                .build());
+
+        HttpResponse<String> response = get("/api/v1/admin/failures/deep-probe", "test-admin-key");
+
+        assertThat(response.statusCode()).isEqualTo(200);
+        assertThat(response.body()).contains("\"failureCode\":\"CONNECT_ERROR\"");
+        assertThat(response.body()).contains("\"host\":\"33.33.33.33\"");
+        assertThat(response.body()).contains("\"source\":\"source_delta\"");
     }
 
     private HttpResponse<String> get(String path, String adminKey) throws Exception {

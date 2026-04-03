@@ -9,6 +9,7 @@ import com.peatroxd.mtprototest.checker.model.ProxyCheckHistoryRecord;
 import com.peatroxd.mtprototest.checker.model.ProxyCheckResult;
 import com.peatroxd.mtprototest.checker.service.MtProtoDeepProbeService;
 import com.peatroxd.mtprototest.checker.service.ProxyBatchCheckService;
+import com.peatroxd.mtprototest.checker.service.ProxyCheckExecutionService;
 import com.peatroxd.mtprototest.checker.service.ProxyCheckUpdateService;
 import com.peatroxd.mtprototest.checker.service.ProxyConnectivityChecker;
 import com.peatroxd.mtprototest.common.cache.PublicCatalogCacheService;
@@ -36,8 +37,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 public class ProxyBatchCheckServiceImpl implements ProxyBatchCheckService {
 
     private final ProxyRepository proxyRepository;
-    private final ProxyConnectivityChecker proxyConnectivityChecker;
-    private final MtProtoDeepProbeService mtProtoDeepProbeService;
+    private final ProxyCheckExecutionService proxyCheckExecutionService;
     private final ProxyCheckUpdateService proxyCheckUpdateService;
     private final Executor proxyCheckerExecutor;
     private final CheckerProperties checkerProperties;
@@ -161,58 +161,17 @@ public class ProxyBatchCheckServiceImpl implements ProxyBatchCheckService {
     }
 
     private ProxyCheckExecution checkProxy(ProxyEntity proxy, AtomicInteger deepProbesStarted) {
-        List<ProxyCheckHistoryRecord> historyRecords = new ArrayList<>();
-
-        ProxyCheckResult quickResult = proxyConnectivityChecker.check(proxy);
-        historyRecords.add(historyRecord(LocalDateTime.now(), ProxyCheckType.QUICK, quickResult));
-
-        if (!quickResult.alive()) {
-            return new ProxyCheckExecution(quickResult, historyRecords);
-        }
-
-        if (deepProbesStarted.getAndIncrement() >= checkerProperties.getDeepProbeLimit()) {
-            return new ProxyCheckExecution(quickResult, historyRecords);
-        }
-
-        MtProtoDeepProbeResult deepResult = mtProtoDeepProbeService.probe(proxy);
-        if (!deepResult.success()) {
-            proxyMetricsService.incrementDeepProbeFailure(deepResult.failureCode());
+        boolean allowDeepProbe = deepProbesStarted.getAndIncrement() < checkerProperties.getDeepProbeLimit();
+        ProxyCheckExecution execution = proxyCheckExecutionService.execute(proxy, allowDeepProbe);
+        if (allowDeepProbe && execution.finalResult().failureCode() != null) {
             log.debug(
                     "Deep probe did not verify proxyId={}: code={}, reason={}",
                     proxy.getId(),
-                    deepResult.failureCode(),
-                    deepResult.reason()
+                    execution.finalResult().failureCode(),
+                    execution.finalResult().errorMessage()
             );
-            ProxyCheckResult quickOkResult = new ProxyCheckResult(
-                    true,
-                    quickResult.latencyMs(),
-                    ProxyVerificationStatus.QUICK_OK,
-                    deepResult.failureCode(),
-                    deepResult.reason()
-            );
-            historyRecords.add(historyRecord(
-                    LocalDateTime.now(),
-                    ProxyCheckType.DEEP,
-                    false,
-                    ProxyVerificationStatus.UNVERIFIED,
-                    null,
-                    deepResult.failureCode(),
-                    deepResult.reason()
-            ));
-            return new ProxyCheckExecution(quickOkResult, historyRecords);
         }
-
-        proxyMetricsService.incrementDeepProbeSuccess();
-        long latencyMs = deepResult.latencyMs() >= 0 ? deepResult.latencyMs() : quickResult.latencyMs();
-        ProxyCheckResult verifiedResult = new ProxyCheckResult(
-                true,
-                latencyMs,
-                ProxyVerificationStatus.VERIFIED,
-                null,
-                null
-        );
-        historyRecords.add(historyRecord(LocalDateTime.now(), ProxyCheckType.DEEP, verifiedResult));
-        return new ProxyCheckExecution(verifiedResult, historyRecords);
+        return execution;
     }
 
     private ProxyCheckExecution failedExecution(ProxyEntity proxy, Throwable error) {
@@ -229,39 +188,16 @@ public class ProxyBatchCheckServiceImpl implements ProxyBatchCheckService {
         );
         return new ProxyCheckExecution(
                 result,
-                List.of(historyRecord(LocalDateTime.now(), ProxyCheckType.QUICK, result))
+                List.of(new ProxyCheckHistoryRecord(
+                        LocalDateTime.now(),
+                        ProxyCheckType.QUICK,
+                        result.alive(),
+                        result.verificationStatus(),
+                        null,
+                        result.failureCode(),
+                        result.errorMessage()
+                ))
         );
     }
 
-    private ProxyCheckHistoryRecord historyRecord(LocalDateTime checkedAt, ProxyCheckType checkType, ProxyCheckResult result) {
-        return historyRecord(
-                checkedAt,
-                checkType,
-                result.alive(),
-                result.verificationStatus(),
-                result.latencyMs() >= 0 ? result.latencyMs() : null,
-                result.failureCode(),
-                result.errorMessage()
-        );
-    }
-
-    private ProxyCheckHistoryRecord historyRecord(
-            LocalDateTime checkedAt,
-            ProxyCheckType checkType,
-            boolean alive,
-            ProxyVerificationStatus verificationStatus,
-            Long latencyMs,
-            com.peatroxd.mtprototest.checker.model.MtProtoProbeFailureCode failureCode,
-            String failureReason
-    ) {
-        return new ProxyCheckHistoryRecord(
-                checkedAt,
-                checkType,
-                alive,
-                verificationStatus,
-                latencyMs,
-                failureCode,
-                failureReason
-        );
-    }
 }
