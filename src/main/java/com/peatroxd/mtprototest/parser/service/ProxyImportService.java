@@ -1,5 +1,6 @@
 package com.peatroxd.mtprototest.parser.service;
 
+import com.peatroxd.mtprototest.admin.service.ProxyImportTrackingService;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.peatroxd.mtprototest.common.cache.PublicCatalogCacheService;
 import com.peatroxd.mtprototest.common.metrics.ProxyMetricsService;
@@ -36,6 +37,7 @@ public class ProxyImportService {
     private final ProxyRepository proxyRepository;
     private final ProxyMetricsService proxyMetricsService;
     private final PublicCatalogCacheService publicCatalogCacheService;
+    private final ProxyImportTrackingService proxyImportTrackingService;
 
     public void importAll() {
         List<ProxySource> proxySources = configuredSources();
@@ -45,11 +47,13 @@ public class ProxyImportService {
         }
 
         for (ProxySource source : proxySources) {
+            proxyImportTrackingService.markStarted(source.sourceName());
             try {
                 importFromSource(source);
             } catch (Exception e) {
                 log.error("Import failed for source='{}': {}", source.sourceName(), e.getMessage(), e);
                 proxyMetricsService.incrementSourceFailure(source.sourceName());
+                proxyImportTrackingService.markFailed(source.sourceName(), e.getMessage());
             }
         }
 
@@ -102,6 +106,7 @@ public class ProxyImportService {
         if (rejected > 0) {
             log.info("Import rejected breakdown for source='{}': {}", source.sourceName(), rejectedByReason);
         }
+        proxyImportTrackingService.markFinished(source.sourceName(), imported, skipped, rejected);
     }
 
     private List<ProxySource> configuredSources() {

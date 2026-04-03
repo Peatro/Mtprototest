@@ -9,6 +9,7 @@ import com.peatroxd.mtprototest.proxy.dto.response.ProxyResponse;
 import com.peatroxd.mtprototest.proxy.dto.response.ProxyStatsResponse;
 import com.peatroxd.mtprototest.proxy.dto.response.RecentCheckSummaryResponse;
 import com.peatroxd.mtprototest.proxy.entity.ProxyEntity;
+import com.peatroxd.mtprototest.proxy.enums.ProxyModerationStatus;
 import com.peatroxd.mtprototest.proxy.enums.ProxyStatus;
 import com.peatroxd.mtprototest.proxy.enums.ProxyVerificationStatus;
 import com.peatroxd.mtprototest.proxy.mapper.ProxyResponseMapper;
@@ -61,6 +62,7 @@ public class ProxyServiceImpl implements ProxyService {
     public List<ProxyResponse> getBest() {
         return proxyRepository.findTop200ByStatusOrderByScoreDescLastLatencyMsAsc(ProxyStatus.ALIVE)
                 .stream()
+                .filter(this::isPubliclyVisible)
                 .sorted(bestProxyComparator())
                 .limit(BEST_PROXY_LIMIT)
                 .map(proxyResponseMapper::toResponse)
@@ -86,6 +88,7 @@ public class ProxyServiceImpl implements ProxyService {
     @Cacheable(cacheNames = PublicCatalogCacheNames.PROXY_BY_ID, key = "#proxyId")
     public ProxyResponse getById(Long proxyId) {
         return proxyRepository.findById(proxyId)
+                .filter(this::isPubliclyVisible)
                 .map(proxyResponseMapper::toResponse)
                 .orElseThrow(() -> new ResponseStatusException(NOT_FOUND, "Proxy not found"));
     }
@@ -94,15 +97,16 @@ public class ProxyServiceImpl implements ProxyService {
     @Cacheable(PublicCatalogCacheNames.PROXY_STATS)
     public ProxyStatsResponse getStats() {
         LocalDateTime since = LocalDateTime.now().minusHours(24);
+        Specification<ProxyEntity> publicVisible = publiclyVisible();
 
         return new ProxyStatsResponse(
-                proxyRepository.count(),
-                proxyRepository.countByStatus(ProxyStatus.NEW),
-                proxyRepository.countByStatus(ProxyStatus.ALIVE),
-                proxyRepository.countByStatus(ProxyStatus.DEAD),
-                proxyRepository.countByVerificationStatus(ProxyVerificationStatus.VERIFIED),
-                proxyRepository.countByVerificationStatus(ProxyVerificationStatus.QUICK_OK),
-                proxyRepository.countByVerificationStatus(ProxyVerificationStatus.UNVERIFIED),
+                proxyRepository.count(publicVisible),
+                proxyRepository.count(publicVisible.and(equalsStatus(ProxyStatus.NEW))),
+                proxyRepository.count(publicVisible.and(equalsStatus(ProxyStatus.ALIVE))),
+                proxyRepository.count(publicVisible.and(equalsStatus(ProxyStatus.DEAD))),
+                proxyRepository.count(publicVisible.and(equalsVerificationStatus(ProxyVerificationStatus.VERIFIED))),
+                proxyRepository.count(publicVisible.and(equalsVerificationStatus(ProxyVerificationStatus.QUICK_OK))),
+                proxyRepository.count(publicVisible.and(equalsVerificationStatus(ProxyVerificationStatus.UNVERIFIED))),
                 new RecentCheckSummaryResponse(
                         proxyCheckHistoryRepository.countByCheckedAtAfter(since),
                         proxyCheckHistoryRepository.countByCheckedAtAfterAndAliveIsTrue(since),
@@ -115,10 +119,16 @@ public class ProxyServiceImpl implements ProxyService {
 
     private Specification<ProxyEntity> buildSpecification(ProxyListRequest request) {
         return Specification.<ProxyEntity>allOf()
+                .and(publiclyVisible())
                 .and(equalsStatus(request.status()))
                 .and(equalsVerificationStatus(request.verificationStatus()))
                 .and(minScore(request.minScore()))
                 .and(maxLatency(request.maxLatency()));
+    }
+
+    private Specification<ProxyEntity> publiclyVisible() {
+        return (root, query, criteriaBuilder) ->
+                criteriaBuilder.notEqual(root.get("moderationStatus"), ProxyModerationStatus.BLACKLISTED);
     }
 
     private Specification<ProxyEntity> equalsStatus(ProxyStatus status) {
@@ -161,11 +171,27 @@ public class ProxyServiceImpl implements ProxyService {
 
     private Comparator<ProxyEntity> bestProxyComparator() {
         return Comparator
-                .comparingInt(this::verificationRank)
+                .comparingInt(this::moderationRank)
+                .thenComparingInt(this::verificationRank)
                 .thenComparing(ProxyEntity::getScore, Comparator.nullsLast(Comparator.reverseOrder()))
                 .thenComparing(proxy -> proxy.getLastSuccessAt() == null ? LocalDateTime.MIN : proxy.getLastSuccessAt(), Comparator.reverseOrder())
                 .thenComparing(proxy -> proxy.getLastLatencyMs() == null ? Long.MAX_VALUE : proxy.getLastLatencyMs())
                 .thenComparing(ProxyEntity::getId);
+    }
+
+    private boolean isPubliclyVisible(ProxyEntity proxy) {
+        return proxy.getModerationStatus() != ProxyModerationStatus.BLACKLISTED;
+    }
+
+    private int moderationRank(ProxyEntity proxy) {
+        ProxyModerationStatus moderationStatus = proxy.getModerationStatus() != null
+                ? proxy.getModerationStatus()
+                : ProxyModerationStatus.NORMAL;
+        return switch (moderationStatus) {
+            case WHITELISTED -> 0;
+            case NORMAL -> 1;
+            case BLACKLISTED -> 2;
+        };
     }
 
     private int verificationRank(ProxyEntity proxy) {

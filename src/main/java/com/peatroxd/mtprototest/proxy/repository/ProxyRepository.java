@@ -1,6 +1,7 @@
 package com.peatroxd.mtprototest.proxy.repository;
 
 import com.peatroxd.mtprototest.proxy.entity.ProxyEntity;
+import com.peatroxd.mtprototest.proxy.enums.ProxyModerationStatus;
 import com.peatroxd.mtprototest.proxy.enums.ProxyStatus;
 import com.peatroxd.mtprototest.proxy.enums.ProxyType;
 import com.peatroxd.mtprototest.proxy.enums.ProxyVerificationStatus;
@@ -28,11 +29,18 @@ public interface ProxyRepository extends JpaRepository<ProxyEntity, Long>, JpaSp
 
     List<ProxyEntity> findAllByOrderByIdAsc();
 
+    @Query("""
+            select p from ProxyEntity p
+            where p.status = :status
+              and p.moderationStatus <> com.peatroxd.mtprototest.proxy.enums.ProxyModerationStatus.BLACKLISTED
+            order by p.score desc, p.lastLatencyMs asc nulls last
+            """)
     List<ProxyEntity> findTop200ByStatusOrderByScoreDescLastLatencyMsAsc(ProxyStatus status);
 
     @Query("""
             select p from ProxyEntity p
             where p.status = :status
+              and p.moderationStatus <> com.peatroxd.mtprototest.proxy.enums.ProxyModerationStatus.BLACKLISTED
             order by p.createdAt asc, p.id asc
             """)
     List<ProxyEntity> findLifecycleBatchByStatus(ProxyStatus status, Pageable pageable);
@@ -40,6 +48,7 @@ public interface ProxyRepository extends JpaRepository<ProxyEntity, Long>, JpaSp
     @Query("""
             select p from ProxyEntity p
             where p.status = :status
+              and p.moderationStatus <> com.peatroxd.mtprototest.proxy.enums.ProxyModerationStatus.BLACKLISTED
               and p.verificationStatus = :verificationStatus
               and (p.lastCheckedAt is null or p.lastCheckedAt <= :checkedBefore)
             order by p.lastCheckedAt asc nulls first, p.id asc
@@ -54,6 +63,7 @@ public interface ProxyRepository extends JpaRepository<ProxyEntity, Long>, JpaSp
     @Query("""
             select p from ProxyEntity p
             where p.status = :status
+              and p.moderationStatus <> com.peatroxd.mtprototest.proxy.enums.ProxyModerationStatus.BLACKLISTED
               and (p.lastCheckedAt is null or p.lastCheckedAt <= :checkedBefore)
             order by p.lastCheckedAt asc nulls first, p.id asc
             """)
@@ -66,6 +76,8 @@ public interface ProxyRepository extends JpaRepository<ProxyEntity, Long>, JpaSp
     long countByStatus(ProxyStatus status);
 
     long countByVerificationStatus(ProxyVerificationStatus verificationStatus);
+
+    long countByModerationStatus(ProxyModerationStatus moderationStatus);
 
     @Modifying
     @Transactional

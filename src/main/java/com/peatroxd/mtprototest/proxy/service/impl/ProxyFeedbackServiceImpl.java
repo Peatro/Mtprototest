@@ -8,6 +8,7 @@ import com.peatroxd.mtprototest.proxy.dto.response.ProxyFeedbackResponse;
 import com.peatroxd.mtprototest.proxy.entity.ProxyEntity;
 import com.peatroxd.mtprototest.proxy.entity.ProxyFeedbackEntity;
 import com.peatroxd.mtprototest.proxy.enums.ProxyFeedbackPlatform;
+import com.peatroxd.mtprototest.proxy.enums.ProxyModerationStatus;
 import com.peatroxd.mtprototest.proxy.repository.ProxyFeedbackRepository;
 import com.peatroxd.mtprototest.proxy.repository.ProxyRepository;
 import com.peatroxd.mtprototest.proxy.service.ProxyFeedbackService;
@@ -51,6 +52,9 @@ public class ProxyFeedbackServiceImpl implements ProxyFeedbackService {
 
         ProxyEntity proxy = proxyRepository.findById(proxyId)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Proxy not found"));
+        if (proxy.getModerationStatus() == ProxyModerationStatus.BLACKLISTED) {
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Proxy not found");
+        }
 
         ProxyFeedbackPlatform platform = request.platform() != null ? request.platform() : ProxyFeedbackPlatform.UNKNOWN;
         boolean anonymousClient = clientKey == null || clientKey.isBlank();

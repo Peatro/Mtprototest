@@ -38,7 +38,9 @@ public class AdminAccessInterceptor implements HandlerInterceptor {
     private boolean requiresAdminAccess(String path) {
         return path.startsWith("/api/import")
                 || path.startsWith("/api/check")
+                || path.startsWith("/api/admin")
                 || path.startsWith("/api/v1/import")
-                || path.startsWith("/api/v1/check");
+                || path.startsWith("/api/v1/check")
+                || path.startsWith("/api/v1/admin");
     }
 }
