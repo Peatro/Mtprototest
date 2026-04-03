@@ -24,6 +24,7 @@
 ## Operational Safety
 
 - [ ] admin endpoints are not exposed without protection
+  Confirmed model: allowlisted IPs plus admin key
 - [ ] reverse proxy preserves real client IP headers consistently
 - [ ] monitoring is configured against `/actuator/health` and `/actuator/prometheus`
 - [ ] logs are collected from the application process
@@ -48,5 +49,6 @@
 
 - [ ] known launch risks are reviewed
 - [ ] rollback path is understood
-- [ ] first-launch traffic expectations are documented
+- [x] first-launch traffic expectations are documented
+  Mode: `low-volume public beta`
 - [ ] release timestamp and owner are recorded

@@ -100,7 +100,7 @@ Need confirmation:
 
 - where `v1` will run
 
-Recommended answer:
+Confirmed answer:
 
 - one VPS/Linux VM
 
@@ -111,7 +111,7 @@ Need confirmation:
 - final domain name
 - who provisions TLS
 
-Recommended answer:
+Confirmed answer:
 
 - custom domain with standard reverse proxy TLS termination
 
@@ -121,7 +121,7 @@ Need confirmation:
 
 - whether admin endpoints should be reachable only from allowlisted IPs or from the public internet with header key protection
 
-Recommended answer:
+Confirmed answer:
 
 - allowlisted IPs plus admin key
 
@@ -131,7 +131,7 @@ Need confirmation:
 
 - keep `/docs` and `/v3/api-docs` public in production or disable them
 
-Recommended answer:
+Confirmed answer:
 
 - disable in `prod`
 
@@ -141,7 +141,7 @@ Need confirmation:
 
 - whether `/actuator/prometheus` is exposed directly or only through private network / reverse proxy restriction
 
-Recommended answer:
+Confirmed answer:
 
 - not public; restrict to monitoring path/network
 
@@ -171,7 +171,7 @@ Need confirmation:
 
 - expected first-week traffic level
 
-Recommended answer:
+Confirmed answer:
 
 - low-volume public beta
 
