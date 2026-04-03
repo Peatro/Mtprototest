@@ -4,7 +4,10 @@ import com.peatroxd.mtprototest.checker.model.MtProtoProbeFailureCode;
 import com.peatroxd.mtprototest.parser.model.RawProxyRejectReason;
 import io.micrometer.core.instrument.Counter;
 import io.micrometer.core.instrument.MeterRegistry;
+import io.micrometer.core.instrument.Timer;
 import org.springframework.stereotype.Component;
+
+import java.time.Duration;
 
 @Component
 public class ProxyMetricsService {
@@ -80,8 +83,41 @@ public class ProxyMetricsService {
         meterRegistry.counter("proxy.deep_probe.total", "outcome", "failure", "failure_code", tagValue).increment();
     }
 
+    public void recordImportDuration(String sourceName, Duration duration, boolean success) {
+        if (duration == null || duration.isNegative()) {
+            return;
+        }
+
+        Timer.builder("proxy.import.duration")
+                .tag("source", normalizeSourceTag(sourceName))
+                .tag("outcome", success ? "success" : "failure")
+                .register(meterRegistry)
+                .record(duration);
+    }
+
+    public void recordCheckCycleDuration(String trigger, String selection, Duration duration, boolean success) {
+        if (duration == null || duration.isNegative()) {
+            return;
+        }
+
+        Timer.builder("proxy.check.cycle.duration")
+                .tag("trigger", normalizeTag(trigger))
+                .tag("selection", normalizeTag(selection))
+                .tag("outcome", success ? "success" : "failure")
+                .register(meterRegistry)
+                .record(duration);
+    }
+
+    public void incrementCheckCycleSkipped(String trigger) {
+        meterRegistry.counter("proxy.check.cycle.skipped.total", "trigger", normalizeTag(trigger)).increment();
+    }
+
     private String normalizeSourceTag(String sourceName) {
         return sourceName != null && !sourceName.isBlank() ? sourceName : "unknown";
+    }
+
+    private String normalizeTag(String value) {
+        return value != null && !value.isBlank() ? value : "unknown";
     }
 
     private String normalizeRejectReasonTag(RawProxyRejectReason rejectReason) {

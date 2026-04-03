@@ -21,6 +21,8 @@ import org.springframework.web.client.RestClient;
 
 import java.util.List;
 import java.util.Map;
+import java.time.Duration;
+import java.time.LocalDateTime;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
@@ -48,11 +50,14 @@ public class ProxyImportService {
 
         for (ProxySource source : proxySources) {
             proxyImportTrackingService.markStarted(source.sourceName());
+            LocalDateTime startedAt = LocalDateTime.now();
             try {
                 importFromSource(source);
+                proxyMetricsService.recordImportDuration(source.sourceName(), Duration.between(startedAt, LocalDateTime.now()), true);
             } catch (Exception e) {
                 log.error("Import failed for source='{}': {}", source.sourceName(), e.getMessage(), e);
                 proxyMetricsService.incrementSourceFailure(source.sourceName());
+                proxyMetricsService.recordImportDuration(source.sourceName(), Duration.between(startedAt, LocalDateTime.now()), false);
                 proxyImportTrackingService.markFailed(source.sourceName(), e.getMessage());
             }
         }
