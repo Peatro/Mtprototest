@@ -2,7 +2,9 @@ package com.peatroxd.mtprototest.bootstrap;
 
 import com.peatroxd.mtprototest.checker.model.ProxyBatchCheckSummary;
 import com.peatroxd.mtprototest.checker.service.ProxyBatchCheckService;
+import com.peatroxd.mtprototest.checker.service.ProxyCheckCycleTrackingService;
 import com.peatroxd.mtprototest.checker.service.ProxyCheckRunCoordinator;
+import com.peatroxd.mtprototest.common.metrics.ProxyMetricsService;
 import com.peatroxd.mtprototest.parser.service.ProxyImportService;
 import org.junit.jupiter.api.Test;
 
@@ -18,6 +20,8 @@ class ProxyStartupBootstrapTest {
         ProxyImportService proxyImportService = mock(ProxyImportService.class);
         ProxyBatchCheckService proxyBatchCheckService = mock(ProxyBatchCheckService.class);
         ProxyCheckRunCoordinator coordinator = new ProxyCheckRunCoordinator();
+        ProxyCheckCycleTrackingService proxyCheckCycleTrackingService = mock(ProxyCheckCycleTrackingService.class);
+        ProxyMetricsService proxyMetricsService = mock(ProxyMetricsService.class);
         StartupProperties startupProperties = new StartupProperties();
         startupProperties.setCheckBatchSize(60);
         startupProperties.setDeepProbeLimit(8);
@@ -26,6 +30,8 @@ class ProxyStartupBootstrapTest {
                 proxyImportService,
                 proxyBatchCheckService,
                 coordinator,
+                proxyCheckCycleTrackingService,
+                proxyMetricsService,
                 startupProperties
         );
 

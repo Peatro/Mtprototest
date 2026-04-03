@@ -158,6 +158,23 @@ Default local configuration:
 
 Configured in [`application.yaml`](./src/main/resources/application.yaml).
 
+### Important Runtime Settings
+
+Before running outside local development, review these settings in [`application.yaml`](./src/main/resources/application.yaml):
+
+- `spring.datasource.*`: PostgreSQL connection
+- `app.sources.entries`: enabled proxy sources
+- `app.admin.enabled`, `app.admin.header-name`, `app.admin.key`: admin API protection
+- `app.startup.bootstrap-enabled`: startup import + startup check cycle
+- `app.startup.check-batch-size`, `app.startup.deep-probe-limit`: bounded startup workload
+- `app.checker.batch-size`, `app.checker.deep-probe-limit`: lifecycle scheduler budget
+- `app.checker.executor.*`: effective checker concurrency and submission window
+- `app.rate-limit.*`: public API and feedback limits
+- `app.feedback.*`: abuse protection thresholds
+
+Production overrides live in [`application-prod.yaml`](./src/main/resources/application-prod.yaml).
+An example env file lives in [`.env.example`](./.env.example).
+
 ### Local Run
 
 ```bash
@@ -169,6 +186,31 @@ On Windows:
 ```powershell
 .\gradlew.bat bootRun
 ```
+
+Production-style profile run:
+
+```powershell
+.\gradlew.bat bootRun "--args=--spring.profiles.active=prod"
+```
+
+### Local Smoke Run Without Startup Bootstrap
+
+Useful for a quick local API/health check without doing a full startup import/check pass:
+
+```powershell
+.\gradlew.bat bootRun "--args=--spring.profiles.active=test --server.port=18081 --app.startup.bootstrap-enabled=false --app.admin.enabled=true --app.admin.key=test-admin-key"
+```
+
+Then verify:
+
+- `GET /actuator/prometheus`
+- `GET /docs`
+- `GET /api/v1/proxies/stats`
+
+Notes:
+
+- if `app.startup.bootstrap-enabled=false`, the application can start correctly while `/actuator/health` still reports `DOWN/503`
+- this is expected until at least one successful import cycle produces source snapshots for the custom `proxyImports` health contributor
 
 ### Tests
 
@@ -186,6 +228,12 @@ Start locally:
 docker-compose up --build
 ```
 
+The compose file is intended for local PostgreSQL only and now supports:
+
+- env-driven database credentials and port mapping
+- persistent named volume
+- PostgreSQL healthcheck
+
 ## Scheduling
 
 The application runs background jobs for:
@@ -198,6 +246,55 @@ The application runs background jobs for:
 On startup, the application can also bootstrap import and initial checking.
 
 Relevant settings are configured under `app.*` in [`application.yaml`](./src/main/resources/application.yaml).
+
+## Operations and Observability
+
+Currently exposed operational endpoints:
+
+- `/actuator/health`
+- `/actuator/info`
+- `/actuator/metrics`
+- `/actuator/prometheus`
+- `/docs`
+- `/v3/api-docs`
+
+Operational signals currently available:
+
+- proxy counts by lifecycle state
+- proxy counts by verification state
+- import totals by source
+- import reject totals by source and reason
+- deep probe success/failure counts
+- import duration timers
+- checker cycle duration timers
+- checker cycle skipped counters
+- custom health for proxy imports and checker freshness
+
+Admin and manual operations:
+
+- public website uses `/api/v1/proxies/*`
+- manual import and check endpoints require the configured admin header/key
+- admin overview, moderation, diagnostics, and recheck endpoints also require admin access
+
+Recommended production reverse-proxy behavior:
+
+- keep `/api/v1/proxies/*` public
+- restrict `/api/v1/admin/*`, `/api/v1/check/*`, and `/api/v1/import/*`
+- preserve real client IP headers consistently, because rate limiting and feedback controls depend on client identity
+- expect `/actuator/health` to remain `DOWN` until imports and checker cycles have produced valid operational snapshots
+
+## Deployment Notes
+
+Minimum deployment assumptions for `v1`:
+
+- one PostgreSQL instance with persistent storage
+- one app instance is enough for first launch
+- admin key must not stay empty outside local development
+- production should run with profile `prod`
+- `app.startup.bootstrap-enabled` can stay on for small catalogs, but bounded startup settings should remain conservative
+- monitor `/actuator/health` and `/actuator/prometheus` from day one
+
+Release and launch checks are tracked in [RELEASE_CHECKLIST.md](./RELEASE_CHECKLIST.md).
 
 ## Current Limitations
 
@@ -226,6 +323,8 @@ Full task plan and moderation points are maintained in [BACKLOG.md](./BACKLOG.md
 ## Repository Pointers
 
 - [`BACKLOG.md`](./BACKLOG.md): product backlog and release plan
+- [`DEPLOYMENT_DECISIONS.md`](./DEPLOYMENT_DECISIONS.md): open deployment and operations decisions for launch
+- [`RELEASE_CHECKLIST.md`](./RELEASE_CHECKLIST.md): pre-launch and release checklist
 - [`build.gradle.kts`](./build.gradle.kts): project dependencies and build setup
 - [`src/main/resources/application.yaml`](./src/main/resources/application.yaml): runtime configuration
 - [`src/main/resources/static/index.html`](./src/main/resources/static/index.html): current website

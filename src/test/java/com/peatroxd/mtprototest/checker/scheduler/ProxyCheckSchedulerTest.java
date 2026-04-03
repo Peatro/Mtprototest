@@ -1,8 +1,10 @@
 package com.peatroxd.mtprototest.checker.scheduler;
 
 import com.peatroxd.mtprototest.checker.service.ProxyBatchCheckService;
+import com.peatroxd.mtprototest.checker.service.ProxyCheckCycleTrackingService;
 import com.peatroxd.mtprototest.checker.service.ProxyCheckRunCoordinator;
 import com.peatroxd.mtprototest.checker.service.ProxyRetentionService;
+import com.peatroxd.mtprototest.common.metrics.ProxyMetricsService;
 import org.junit.jupiter.api.Test;
 
 import static org.mockito.Mockito.mock;
@@ -15,11 +17,15 @@ class ProxyCheckSchedulerTest {
     void shouldSkipScheduledRunWhenAnotherCatalogCycleIsActive() {
         ProxyBatchCheckService proxyBatchCheckService = mock(ProxyBatchCheckService.class);
         ProxyRetentionService proxyRetentionService = mock(ProxyRetentionService.class);
+        ProxyCheckCycleTrackingService proxyCheckCycleTrackingService = mock(ProxyCheckCycleTrackingService.class);
+        ProxyMetricsService proxyMetricsService = mock(ProxyMetricsService.class);
         ProxyCheckRunCoordinator coordinator = new ProxyCheckRunCoordinator();
         ProxyCheckScheduler scheduler = new ProxyCheckScheduler(
                 proxyBatchCheckService,
                 proxyRetentionService,
-                coordinator
+                coordinator,
+                proxyCheckCycleTrackingService,
+                proxyMetricsService
         );
 
         coordinator.tryStartCatalogCycle("test");
