@@ -22,6 +22,12 @@ app:
     fixed-delay-ms: 3600000
     deep-probe-limit: 5
     batch-size: 50
+  rate-limit:
+    enabled: true
+    public-read-limit: 2
+    public-read-window-ms: 60000
+    feedback-write-limit: 1
+    feedback-write-window-ms: 60000
   sources:
     entries:
       - name: test_source

@@ -47,6 +47,13 @@ app:
     dedupe-window-minutes: 60
     recent-limit: 20
 
+  rate-limit:
+    enabled: true
+    public-read-limit: 120
+    public-read-window-ms: 60000
+    feedback-write-limit: 20
+    feedback-write-window-ms: 60000
+
   sources:
     entries:
       - name: solispirit
