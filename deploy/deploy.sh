@@ -4,7 +4,7 @@ set -euo pipefail
 cd /opt/mtproxycheck
 
 git fetch origin
-git reset --hard origin/main
+git reset --hard origin/master
 
 docker compose -f compose.mtproxy.yml up -d --build
 
