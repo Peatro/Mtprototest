@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-cd /opt/mtproxy
+cd /opt/mtproxycheck
 
 git fetch origin
 git reset --hard origin/main
