@@ -7,6 +7,7 @@ import com.peatroxd.mtprototest.proxy.dto.request.ProxyListRequest;
 import com.peatroxd.mtprototest.proxy.dto.response.ProxyPageResponse;
 import com.peatroxd.mtprototest.proxy.dto.response.ProxyResponse;
 import com.peatroxd.mtprototest.proxy.dto.response.ProxyStatsResponse;
+import com.peatroxd.mtprototest.proxy.dto.response.ProxyTelegramLinkDto;
 import com.peatroxd.mtprototest.proxy.dto.response.RecentCheckSummaryResponse;
 import com.peatroxd.mtprototest.proxy.entity.ProxyEntity;
 import com.peatroxd.mtprototest.proxy.enums.ProxyModerationStatus;
@@ -66,6 +67,14 @@ public class ProxyServiceImpl implements ProxyService {
                 .sorted(bestProxyComparator())
                 .limit(BEST_PROXY_LIMIT)
                 .map(proxyResponseMapper::toResponse)
+                .toList();
+    }
+
+    @Override
+    public List<ProxyTelegramLinkDto> getBestLinks(int limit) {
+        return getBest().stream()
+                .limit(limit)
+                .map(r -> new ProxyTelegramLinkDto(r.host(), r.port(), r.secret(), r.lastLatencyMs(), r.telegramDeepLink()))
                 .toList();
     }
 
