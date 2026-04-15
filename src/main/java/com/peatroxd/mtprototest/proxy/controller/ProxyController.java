@@ -7,6 +7,7 @@ import com.peatroxd.mtprototest.proxy.dto.response.ProxyFeedbackResponse;
 import com.peatroxd.mtprototest.proxy.dto.response.ProxyPageResponse;
 import com.peatroxd.mtprototest.proxy.dto.response.ProxyResponse;
 import com.peatroxd.mtprototest.proxy.dto.response.ProxyStatsResponse;
+import com.peatroxd.mtprototest.proxy.dto.response.ProxyTelegramLinkDto;
 import com.peatroxd.mtprototest.proxy.enums.ProxyStatus;
 import com.peatroxd.mtprototest.proxy.enums.ProxyVerificationStatus;
 import com.peatroxd.mtprototest.proxy.service.ProxyFeedbackService;
@@ -79,6 +80,13 @@ public class ProxyController {
     @GetMapping("/best")
     public List<ProxyResponse> best() {
         return proxyService.getBest();
+    }
+
+    @GetMapping("/best-links")
+    public List<ProxyTelegramLinkDto> getBestLinks(
+            @RequestParam(defaultValue = "3") @Min(1) @Max(10) int limit
+    ) {
+        return proxyService.getBestLinks(limit);
     }
 
     @PostMapping("/{proxyId}/feedback")
