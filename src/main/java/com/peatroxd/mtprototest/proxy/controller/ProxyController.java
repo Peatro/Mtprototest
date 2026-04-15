@@ -33,7 +33,7 @@ import static org.springframework.http.HttpStatus.BAD_REQUEST;
 
 @RestController
 @Validated
-@RequestMapping({"/api/proxies", "/api/v1/proxies"})
+@RequestMapping({"/api/proxies", "/api/v1/proxies", "/api/public/proxies"})
 @RequiredArgsConstructor
 public class ProxyController {
 
