@@ -1,4 +1,4 @@
-# Mtprototest
+# MtProxyCheck
 
 Backend and web application for collecting, validating, ranking, and distributing public Telegram MTProto proxies.
 
@@ -432,6 +432,4 @@ Full task plan and moderation points are maintained in [BACKLOG.md](./BACKLOG.md
 - [`src/main/resources/static/index.html`](./src/main/resources/static/index.html): current website
 - [`src/main/resources/db/changelog`](./src/main/resources/db/changelog): database migrations
 
-## Next Product Milestone
-
-Target: first working B2C web release by `2026-05-01`.
+v1 shipped · live at mtproxycheck.ru
