@@ -579,12 +579,15 @@
 
         /* ── SUBSCRIBE CTA (shown after worked feedback) ─────────── */
         .subscribe-cta {
+            display: none;
             padding: 16px 20px;
             border-radius: 12px;
             background: var(--blue-dim);
             border: 1px solid rgba(0, 82, 255, 0.18);
-            display: grid;
             gap: 12px;
+        }
+        .subscribe-cta.is-visible {
+            display: grid;
         }
         .subscribe-cta__text {
             font-size: 14px;
@@ -891,7 +894,6 @@
     <div class="container">
         <div class="section-head">
             <div>
-                <div class="kicker">Для телефона</div>
                 <h2>Готовый набор ссылок</h2>
                 <p>Нажимай по одной — каждая добавит прокси в Telegram. Пробуй пока не найдёшь рабочий.</p>
             </div>
@@ -1529,7 +1531,7 @@
                 <button class="btn safe"   id="desktopOk"   type="button" ${feedbackLocked ? "disabled" : ""}>Сработало</button>
                 <button class="btn danger" id="desktopFail" type="button" ${feedbackLocked ? "disabled" : ""}>Не сработало</button>
             </div>
-            <div class="subscribe-cta" id="subscribeCta" hidden>
+            <div class="subscribe-cta" id="subscribeCta">
                 <p class="subscribe-cta__text">Прокси живут 1–3 дня. Подпишись на канал — каждый день свежие рабочие варианты автоматически</p>
                 <a class="btn primary btn-block" href="https://t.me/mtproxycheck" target="_blank" rel="noreferrer">Подписаться</a>
             </div>
@@ -1730,7 +1732,7 @@
                 queueAnalyticsEvent("feedback_sent", { ...eventProps, result: String(result || "").toLowerCase() });
                 if (isWorked) {
                     const subscribeCta = document.getElementById("subscribeCta");
-                    if (subscribeCta) subscribeCta.hidden = false;
+                    if (subscribeCta) subscribeCta.classList.add("is-visible");
                 }
                 showToast(result === CONFIG.feedbackResults.worked ? successMessage : failureMessage);
             } catch (error) {
