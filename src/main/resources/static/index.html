@@ -577,6 +577,21 @@
             gap: 8px;
         }
 
+        /* ── SUBSCRIBE CTA (shown after worked feedback) ─────────── */
+        .subscribe-cta {
+            padding: 16px 20px;
+            border-radius: 12px;
+            background: var(--blue-dim);
+            border: 1px solid rgba(0, 82, 255, 0.18);
+            display: grid;
+            gap: 12px;
+        }
+        .subscribe-cta__text {
+            font-size: 14px;
+            line-height: 1.55;
+            color: var(--ink-2);
+        }
+
         /* ── STATE BLOCK (JS-rendered) ───────────────────────────── */
         .state {
             display: grid;
@@ -1514,6 +1529,10 @@
                 <button class="btn safe"   id="desktopOk"   type="button" ${feedbackLocked ? "disabled" : ""}>Сработало</button>
                 <button class="btn danger" id="desktopFail" type="button" ${feedbackLocked ? "disabled" : ""}>Не сработало</button>
             </div>
+            <div class="subscribe-cta" id="subscribeCta" hidden>
+                <p class="subscribe-cta__text">Прокси живут 1–3 дня. Подпишись на канал — каждый день свежие рабочие варианты автоматически</p>
+                <a class="btn primary btn-block" href="https://t.me/mtproxycheck" target="_blank" rel="noreferrer">Подписаться</a>
+            </div>
             ${hasNextProxy ? `<button class="btn ghost btn-block" id="nextBtn" type="button">Попробовать следующий вариант</button>` : ""}
         `;
 
@@ -1702,12 +1721,18 @@
                 buttons.forEach((button) => { button.disabled = true; });
                 await sendFeedback(proxy.id, result, platform);
                 markFeedbackSubmitted(proxy.id, platform);
-                queueAnalyticsEvent("feedback_sent", {
+                const isWorked = result === CONFIG.feedbackResults.worked;
+                const eventProps = {
                     proxy_id: proxy.id,
                     platform: String(platform || "").toLowerCase(),
-                    result: String(result || "").toLowerCase(),
                     source_section: platform === CONFIG.feedbackPlatforms.mobile ? "mobile_pack" : "desktop_hero"
-                });
+                };
+                queueAnalyticsEvent(isWorked ? "worked_clicked" : "failed_clicked", eventProps);
+                queueAnalyticsEvent("feedback_sent", { ...eventProps, result: String(result || "").toLowerCase() });
+                if (isWorked) {
+                    const subscribeCta = document.getElementById("subscribeCta");
+                    if (subscribeCta) subscribeCta.hidden = false;
+                }
                 showToast(result === CONFIG.feedbackResults.worked ? successMessage : failureMessage);
             } catch (error) {
                 if (!feedbackAlreadySent) buttons.forEach((button) => { button.disabled = false; });
