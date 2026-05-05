@@ -1597,6 +1597,9 @@
             link_type: proxy.telegramDeepLink ? "tg_deep_link" : "web_link"
         });
 
+        const subscribeCta = document.getElementById("subscribeCta");
+        if (subscribeCta) subscribeCta.classList.add("is-visible");
+
         // копируем в фоне — страховка на случай если tg:// не откроется
         if (navigator.clipboard?.writeText) {
             navigator.clipboard.writeText(link).catch(() => {});
@@ -1730,10 +1733,6 @@
                 };
                 queueAnalyticsEvent(isWorked ? "worked_clicked" : "failed_clicked", eventProps);
                 queueAnalyticsEvent("feedback_sent", { ...eventProps, result: String(result || "").toLowerCase() });
-                if (isWorked) {
-                    const subscribeCta = document.getElementById("subscribeCta");
-                    if (subscribeCta) subscribeCta.classList.add("is-visible");
-                }
                 showToast(result === CONFIG.feedbackResults.worked ? successMessage : failureMessage);
             } catch (error) {
                 if (!feedbackAlreadySent) buttons.forEach((button) => { button.disabled = false; });
@@ -1827,12 +1826,17 @@
     document.addEventListener("click", (e) => {
         const analyticsLink = e.target.closest("a[data-analytics-event='open-telegram-link']");
         if (analyticsLink && !analyticsLink.classList.contains("disabled")) {
+            const sourceSection = analyticsLink.dataset.sourceSection || "unknown";
             queueAnalyticsEvent("open_telegram_link", {
                 proxy_id: Number(analyticsLink.dataset.proxyId || 0) || null,
                 platform: analyticsLink.dataset.platform || "unknown",
-                source_section: analyticsLink.dataset.sourceSection || "unknown",
+                source_section: sourceSection,
                 link_type: analyticsLink.dataset.linkType || "unknown"
             });
+            if (sourceSection === "hero") {
+                const subscribeCta = document.getElementById("subscribeCta");
+                if (subscribeCta) subscribeCta.classList.add("is-visible");
+            }
         }
     });
 
