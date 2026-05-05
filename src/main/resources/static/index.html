@@ -874,7 +874,7 @@
 <section class="hero">
     <div class="container">
         <div class="hero-eyebrow">MTProto Proxy Catalog</div>
-        <h1>Открой Telegram прямо сейчас</h1>
+        <h1>Бесплатные MTProto прокси — нажми и подключи в один клик</h1>
         <div id="trustLine" class="trust-line">
             <span class="skel" style="height:14px;width:220px;border-radius:4px" aria-hidden="true"></span>
         </div>
@@ -1535,6 +1535,7 @@
             </div>
             ${hasNextProxy ? `<button class="btn ghost btn-block" id="nextBtn" type="button">Попробовать следующий вариант</button>` : ""}
         `;
+        trackBestProxyShown(proxy);
 
         // mobile combo
         if (mobile) {
@@ -1581,8 +1582,6 @@
             successMessage:  "Отзыв сохранён: сработало",
             failureMessage:  "Отзыв сохранён: не сработало"
         });
-
-        trackBestProxyShown(proxy);
     }
 
     function handleMobileCtaClick(proxy) {
