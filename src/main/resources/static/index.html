@@ -1173,10 +1173,15 @@
     function trackPageView() {
         if (analyticsState.pageViewTracked) return;
         analyticsState.pageViewTracked = true;
+        const params = new URLSearchParams(window.location.search);
         queueAnalyticsEvent("page_view", {
             page_path: window.location.pathname,
             page_title: document.title,
-            source_section: "landing_page"
+            source_section: "landing_page",
+            referrer: document.referrer || null,
+            utm_source: params.get("utm_source"),
+            utm_medium: params.get("utm_medium"),
+            utm_campaign: params.get("utm_campaign")
         });
     }
 
@@ -1195,7 +1200,8 @@
 
             window.posthog.init(config.posthogApiKey, {
                 api_host: config.posthogHost,
-                autocapture: false
+                autocapture: false,
+                capture_pageview: false
             });
 
             analyticsState.ready = true;
@@ -1221,7 +1227,7 @@
 
         analyticsState.lastBestProxyKey = key;
         queueAnalyticsEvent("best_proxy_shown", {
-            proxy_id: proxy.id,
+            proxy_id: Number(proxy.id),
             platform: "desktop",
             source_section: "desktop_hero",
             position: appState.currentDesktopIndex + 1,
@@ -1514,6 +1520,12 @@
                 copyFieldBtn.addEventListener("click", async () => {
                     try {
                         await copyToClipboard(linkToCopy);
+                        queueAnalyticsEvent("copy_proxy", {
+                            proxy_id: Number(proxy.id),
+                            platform: "mobile",
+                            source_section: "fallback",
+                            link_type: proxy.telegramDeepLink ? "tg_deep_link" : "web_link"
+                        });
                         showToast("Ссылка скопирована");
                     } catch {
                         if (copyFieldInput) { copyFieldInput.select(); }
@@ -1524,6 +1536,11 @@
             const nextFromFallbackBtn = document.getElementById("nextFromFallbackBtn");
             if (nextFromFallbackBtn) {
                 nextFromFallbackBtn.addEventListener("click", () => {
+                    queueAnalyticsEvent("next_proxy_clicked", {
+                        proxy_id: Number(proxy.id),
+                        from_position: appState.currentDesktopIndex + 1,
+                        source_section: "desktop_fallback"
+                    });
                     appState.currentDesktopIndex += 1;
                     renderHeroCta(HeroCta.READY, getCurrentDesktopProxy());
                     showToast(`Вариант ${appState.currentDesktopIndex + 1}`);
@@ -1551,7 +1568,7 @@
             ${hasNextProxy ? `<button class="btn ghost btn-block" id="nextBtn" type="button">Попробовать следующий вариант</button>` : ""}
             <div class="subscribe-cta" id="subscribeCta">
                 <p class="subscribe-cta__text">Прокси живут 1–3 дня. Подпишись на канал — каждый день свежие рабочие варианты автоматически</p>
-                <a class="btn secondary btn-block" href="https://t.me/mtproxycheck" target="_blank" rel="noreferrer">Подписаться</a>
+                <a class="btn secondary btn-block" href="https://t.me/mtproxycheck" target="_blank" rel="noreferrer" data-analytics-event="subscribe">Подписаться</a>
             </div>
         `;
         trackBestProxyShown(proxy);
@@ -1571,7 +1588,7 @@
                 try {
                     await copyToClipboard(proxy.telegramDeepLink || proxy.telegramWebLink);
                     queueAnalyticsEvent("copy_proxy", {
-                        proxy_id: proxy.id,
+                        proxy_id: Number(proxy.id),
                         platform: mobile ? "mobile" : "desktop",
                         source_section: "hero",
                         link_type: proxy.telegramDeepLink ? "tg_deep_link" : "web_link"
@@ -1587,6 +1604,11 @@
         const nextBtn = document.getElementById("nextBtn");
         if (nextBtn && hasNextProxy) {
             nextBtn.addEventListener("click", () => {
+                queueAnalyticsEvent("next_proxy_clicked", {
+                    proxy_id: Number(proxy.id),
+                    from_position: appState.currentDesktopIndex + 1,
+                    source_section: "desktop_hero"
+                });
                 appState.currentDesktopIndex += 1;
                 renderHeroCta(HeroCta.READY, getCurrentDesktopProxy());
                 showToast(`Вариант ${appState.currentDesktopIndex + 1}`);
@@ -1608,18 +1630,29 @@
         if (!link) return;
 
         queueAnalyticsEvent("open_telegram_link", {
-            proxy_id: proxy.id,
+            proxy_id: Number(proxy.id),
             platform: "mobile",
             source_section: "hero",
             link_type: proxy.telegramDeepLink ? "tg_deep_link" : "web_link"
         });
 
         const subscribeCta = document.getElementById("subscribeCta");
-        if (subscribeCta) subscribeCta.classList.add("is-visible");
+        if (subscribeCta && !subscribeCta.classList.contains("is-visible")) {
+            queueAnalyticsEvent("subscribe_cta_shown", { proxy_id: Number(proxy.id), source_section: "hero" });
+            subscribeCta.classList.add("is-visible");
+        }
 
         // копируем в фоне — страховка на случай если tg:// не откроется
         if (navigator.clipboard?.writeText) {
-            navigator.clipboard.writeText(link).catch(() => {});
+            navigator.clipboard.writeText(link).then(() => {
+                queueAnalyticsEvent("copy_proxy", {
+                    proxy_id: Number(proxy.id),
+                    platform: "mobile",
+                    source_section: "hero",
+                    link_type: proxy.telegramDeepLink ? "tg_deep_link" : "web_link",
+                    trigger: "auto"
+                });
+            }).catch(() => {});
         }
 
         const isTgLink = link.startsWith("tg://");
@@ -1648,6 +1681,10 @@
             window.removeEventListener("blur", onBlur);
             document.removeEventListener("visibilitychange", onVisChange);
             if (!appOpened) {
+                queueAnalyticsEvent("mobile_fallback_shown", {
+                    proxy_id: Number(proxy.id),
+                    source_section: "desktop_hero"
+                });
                 renderHeroCta(HeroCta.FALLBACK, proxy);
             }
         }, 1400);
@@ -1709,6 +1746,16 @@
             .join("");
 
         dom.mobilePanel.innerHTML = `<div class="pack-list">${cardsHtml}</div>`;
+        appState.mobilePack.forEach((proxy, index) => {
+            queueAnalyticsEvent("best_proxy_shown", {
+                proxy_id: Number(proxy.id),
+                platform: "mobile",
+                source_section: "mobile_pack",
+                position: index + 1,
+                verification_status: proxy.verificationStatus,
+                proxy_status: proxy.status
+            });
+        });
     }
 
     function renderEmptyState() {
@@ -1743,13 +1790,12 @@
                 await sendFeedback(proxy.id, result, platform);
                 markFeedbackSubmitted(proxy.id, platform);
                 const isWorked = result === CONFIG.feedbackResults.worked;
-                const eventProps = {
-                    proxy_id: proxy.id,
+                queueAnalyticsEvent(isWorked ? "worked_clicked" : "failed_clicked", {
+                    proxy_id: Number(proxy.id),
                     platform: String(platform || "").toLowerCase(),
-                    source_section: platform === CONFIG.feedbackPlatforms.mobile ? "mobile_pack" : "desktop_hero"
-                };
-                queueAnalyticsEvent(isWorked ? "worked_clicked" : "failed_clicked", eventProps);
-                queueAnalyticsEvent("feedback_sent", { ...eventProps, result: String(result || "").toLowerCase() });
+                    source_section: platform === CONFIG.feedbackPlatforms.mobile ? "mobile_pack" : "desktop_hero",
+                    result: String(result || "").toLowerCase()
+                });
                 showToast(result === CONFIG.feedbackResults.worked ? successMessage : failureMessage);
             } catch (error) {
                 if (!feedbackAlreadySent) buttons.forEach((button) => { button.disabled = false; });
@@ -1802,15 +1848,6 @@
                 verified_count: appState.stats.verifiedCount
             });
 
-            queueAnalyticsEvent("import_finished", {
-                source_section: "landing_page",
-                load_id: loadId,
-                outcome: "success",
-                proxy_count: appState.proxies.length,
-                alive_count: appState.stats.aliveCount,
-                verified_count: appState.stats.verifiedCount
-            });
-
             if (!appState.proxies.length) {
                 renderEmptyState();
                 setStatus("Сейчас в каталоге нет прокси. Проверь позже.", true);
@@ -1852,8 +1889,19 @@
             });
             if (sourceSection === "hero") {
                 const subscribeCta = document.getElementById("subscribeCta");
-                if (subscribeCta) subscribeCta.classList.add("is-visible");
+                if (subscribeCta && !subscribeCta.classList.contains("is-visible")) {
+                    queueAnalyticsEvent("subscribe_cta_shown", {
+                        proxy_id: Number(analyticsLink.dataset.proxyId || 0) || null,
+                        source_section: "hero"
+                    });
+                    subscribeCta.classList.add("is-visible");
+                }
             }
+        }
+
+        const subscribeLink = e.target.closest("a[data-analytics-event='subscribe']");
+        if (subscribeLink) {
+            queueAnalyticsEvent("subscribe_clicked", { source_section: "hero" });
         }
     });
 
