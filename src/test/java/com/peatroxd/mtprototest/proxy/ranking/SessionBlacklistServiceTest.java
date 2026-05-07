@@ -19,6 +19,7 @@ class SessionBlacklistServiceTest {
                 new ProxyRankingProperties.SegmentOverridesProps(false, List.of()),
                 new ProxyRankingProperties.SegmentScoringProps(false, false, 10, 1.0, 2, 3, 2, 1),
                 new ProxyRankingProperties.SessionAggregationProps(false, 15),
+                new ProxyRankingProperties.UnrecoverableSessionProps(false, 3),
                 new ProxyRankingProperties.DecisionLoggingProps(false)
         );
         service = new SessionBlacklistService(props);
@@ -52,6 +53,7 @@ class SessionBlacklistServiceTest {
                 new ProxyRankingProperties.SegmentOverridesProps(false, List.of()),
                 new ProxyRankingProperties.SegmentScoringProps(false, false, 10, 1.0, 2, 3, 2, 1),
                 new ProxyRankingProperties.SessionAggregationProps(false, 15),
+                new ProxyRankingProperties.UnrecoverableSessionProps(false, 3),
                 new ProxyRankingProperties.DecisionLoggingProps(false)
         );
         SessionBlacklistService small = new SessionBlacklistService(smallProps);
@@ -68,6 +70,7 @@ class SessionBlacklistServiceTest {
                 new ProxyRankingProperties.SegmentOverridesProps(false, List.of()),
                 new ProxyRankingProperties.SegmentScoringProps(false, false, 10, 1.0, 2, 3, 2, 1),
                 new ProxyRankingProperties.SessionAggregationProps(false, 15),
+                new ProxyRankingProperties.UnrecoverableSessionProps(false, 3),
                 new ProxyRankingProperties.DecisionLoggingProps(false)
         );
         SessionBlacklistService svc = new SessionBlacklistService(disabled);

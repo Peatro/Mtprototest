@@ -612,6 +612,57 @@
             color: var(--ink-2);
         }
 
+        /* ── UNRECOVERABLE SESSION CTA ───────────────────────────── */
+        .unrecoverable-cta {
+            display: none;
+            padding: 16px 20px;
+            border-radius: 12px;
+            background: var(--c-danger-bg);
+            border: 1px solid var(--c-danger-border);
+            gap: 12px;
+        }
+        .unrecoverable-cta.is-visible {
+            display: grid;
+        }
+        .unrecoverable-cta__title {
+            font-size: 14px;
+            font-weight: 600;
+            color: var(--c-danger);
+        }
+        .unrecoverable-cta__text {
+            font-size: 14px;
+            line-height: 1.55;
+            color: var(--ink-2);
+        }
+        .unrecoverable-cta__text a {
+            color: var(--blue);
+            text-decoration: none;
+        }
+        .unrecoverable-form {
+            display: none;
+            gap: 8px;
+        }
+        .unrecoverable-form.is-visible {
+            display: grid;
+        }
+        .unrecoverable-form textarea {
+            width: 100%;
+            padding: 10px 12px;
+            border-radius: 8px;
+            border: 1px solid var(--border);
+            background: var(--surface);
+            color: var(--ink);
+            font-size: 13px;
+            font-family: inherit;
+            resize: vertical;
+            min-height: 80px;
+            box-sizing: border-box;
+        }
+        .unrecoverable-form textarea:focus {
+            outline: none;
+            border-color: var(--blue);
+        }
+
         /* ── STATE BLOCK (JS-rendered) ───────────────────────────── */
         .state {
             display: grid;
@@ -1044,6 +1095,8 @@
         }
     };
 
+    let sessionFailureThreshold = 3;
+
     // DOM
     const dom = {
         status: document.getElementById("status"),
@@ -1062,7 +1115,9 @@
         mobilePack: [],
         isLoading: false,
         error: null,
-        submittedFeedback: new Set()
+        submittedFeedback: new Set(),
+        sessionFailureCount: 0,
+        unrecoverableShown: false
     };
 
     const analyticsState = {
@@ -1188,6 +1243,9 @@
     async function initAnalytics() {
         try {
             const config = await fetchJson(CONFIG.endpoints.frontendConfig);
+            if (config?.sessionFailureThreshold > 0) {
+                sessionFailureThreshold = config.sessionFailureThreshold;
+            }
             if (!config?.posthogEnabled || !config?.posthogApiKey) {
                 return;
             }
@@ -1536,6 +1594,8 @@
             const nextFromFallbackBtn = document.getElementById("nextFromFallbackBtn");
             if (nextFromFallbackBtn) {
                 nextFromFallbackBtn.addEventListener("click", () => {
+                    sendSignal(proxy.id, "NEXT_CLICKED");
+                    checkUnrecoverableSession(proxy.id);
                     queueAnalyticsEvent("next_proxy_clicked", {
                         proxy_id: Number(proxy.id),
                         from_position: appState.currentDesktopIndex + 1,
@@ -1544,6 +1604,7 @@
                     appState.currentDesktopIndex += 1;
                     renderHeroCta(HeroCta.READY, getCurrentDesktopProxy());
                     showToast(`Вариант ${appState.currentDesktopIndex + 1}`);
+                    setupUnrecoverableForm();
                 });
             }
             return;
@@ -1570,6 +1631,15 @@
                 <p class="subscribe-cta__text">Прокси живут 1–3 дня. Подпишись на канал — каждый день свежие рабочие варианты автоматически</p>
                 <a class="btn secondary btn-block" href="https://t.me/mtproxycheck" target="_blank" rel="noreferrer" data-analytics-event="subscribe">Подписаться</a>
             </div>
+            <div class="unrecoverable-cta" id="unrecoverableCta">
+                <div class="unrecoverable-cta__title">Ничего не сработало?</div>
+                <p class="unrecoverable-cta__text">Похоже, провайдер блокирует MTProto. Попробуй VPN или <a href="https://t.me/mtproxycheck" target="_blank" rel="noreferrer">подпишись на канал</a> — там ежедневно свежие варианты.</p>
+                <button class="btn ghost btn-block" id="reportDiagnosticBtn" type="button">Сообщить о проблеме</button>
+                <div class="unrecoverable-form" id="unrecoverableForm">
+                    <textarea id="diagnosticNotes" placeholder="Опционально: ISP, регион или описание ситуации" rows="3"></textarea>
+                    <button class="btn secondary btn-block" id="submitDiagnosticBtn" type="button">Отправить</button>
+                </div>
+            </div>
         `;
         trackBestProxyShown(proxy);
 
@@ -1577,7 +1647,10 @@
         if (mobile) {
             const mobileCtaBtn = document.getElementById("mobileCtaBtn");
             if (mobileCtaBtn && hasLink) {
-                mobileCtaBtn.addEventListener("click", () => handleMobileCtaClick(proxy));
+                mobileCtaBtn.addEventListener("click", () => {
+                    sendSignal(proxy.id, "OPEN_TELEGRAM");
+                    handleMobileCtaClick(proxy);
+                });
             }
         }
 
@@ -1604,6 +1677,8 @@
         const nextBtn = document.getElementById("nextBtn");
         if (nextBtn && hasNextProxy) {
             nextBtn.addEventListener("click", () => {
+                sendSignal(proxy.id, "NEXT_CLICKED");
+                checkUnrecoverableSession(proxy.id);
                 queueAnalyticsEvent("next_proxy_clicked", {
                     proxy_id: Number(proxy.id),
                     from_position: appState.currentDesktopIndex + 1,
@@ -1612,6 +1687,7 @@
                 appState.currentDesktopIndex += 1;
                 renderHeroCta(HeroCta.READY, getCurrentDesktopProxy());
                 showToast(`Вариант ${appState.currentDesktopIndex + 1}`);
+                setupUnrecoverableForm();
             });
         }
 
@@ -1777,6 +1853,63 @@
         renderMobilePack();
     }
 
+    // Signal helpers
+    function sendSignal(proxyId, event) {
+        fetch(`${CONFIG.endpoints.feedbackBase}/${proxyId}/signal`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ event })
+        }).catch(() => {});
+    }
+
+    function checkUnrecoverableSession(proxyId) {
+        if (appState.unrecoverableShown) return;
+        appState.sessionFailureCount += 1;
+        if (appState.sessionFailureCount < sessionFailureThreshold) return;
+        appState.unrecoverableShown = true;
+        const cta = document.getElementById("unrecoverableCta");
+        if (cta) cta.classList.add("is-visible");
+        queueAnalyticsEvent("unrecoverable_session", {
+            proxy_id: Number(proxyId),
+            failure_count: appState.sessionFailureCount
+        });
+        fetch("/api/session/diagnostic", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ failedAttempts: appState.sessionFailureCount })
+        }).catch(() => {});
+    }
+
+    function setupUnrecoverableForm() {
+        const reportBtn = document.getElementById("reportDiagnosticBtn");
+        const form = document.getElementById("unrecoverableForm");
+        const submitBtn = document.getElementById("submitDiagnosticBtn");
+        if (reportBtn && form) {
+            reportBtn.addEventListener("click", () => {
+                form.classList.add("is-visible");
+                reportBtn.style.display = "none";
+            });
+        }
+        if (submitBtn) {
+            submitBtn.addEventListener("click", async () => {
+                const notes = document.getElementById("diagnosticNotes")?.value?.trim() || null;
+                submitBtn.disabled = true;
+                try {
+                    await fetch("/api/session/diagnostic", {
+                        method: "POST",
+                        headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify({ failedAttempts: appState.sessionFailureCount, notes })
+                    });
+                    showToast("Спасибо, отчёт отправлен");
+                    if (form) form.classList.remove("is-visible");
+                } catch {
+                    showToast("Не удалось отправить отчёт");
+                    submitBtn.disabled = false;
+                }
+            });
+        }
+    }
+
     // Feedback
     function bindFeedbackControls({ proxy, platform, okButtonId, failButtonId, successMessage, failureMessage }) {
         const okButton = document.getElementById(okButtonId);
@@ -1790,6 +1923,8 @@
                 await sendFeedback(proxy.id, result, platform);
                 markFeedbackSubmitted(proxy.id, platform);
                 const isWorked = result === CONFIG.feedbackResults.worked;
+                sendSignal(proxy.id, isWorked ? "WORKED" : "FAILED");
+                if (!isWorked) checkUnrecoverableSession(proxy.id);
                 queueAnalyticsEvent(isWorked ? "worked_clicked" : "failed_clicked", {
                     proxy_id: Number(proxy.id),
                     platform: String(platform || "").toLowerCase(),
@@ -1855,6 +1990,7 @@
             }
 
             renderApp();
+            setupUnrecoverableForm();
 
             const workingCount = getWorkingProxyCount();
             if (!workingCount) {
@@ -1880,9 +2016,11 @@
     document.addEventListener("click", (e) => {
         const analyticsLink = e.target.closest("a[data-analytics-event='open-telegram-link']");
         if (analyticsLink && !analyticsLink.classList.contains("disabled")) {
+            const proxyId = Number(analyticsLink.dataset.proxyId || 0) || null;
             const sourceSection = analyticsLink.dataset.sourceSection || "unknown";
+            if (proxyId) sendSignal(proxyId, "OPEN_TELEGRAM");
             queueAnalyticsEvent("open_telegram_link", {
-                proxy_id: Number(analyticsLink.dataset.proxyId || 0) || null,
+                proxy_id: proxyId,
                 platform: analyticsLink.dataset.platform || "unknown",
                 source_section: sourceSection,
                 link_type: analyticsLink.dataset.linkType || "unknown"

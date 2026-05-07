@@ -10,6 +10,7 @@ public record ProxyRankingProperties(
         SegmentOverridesProps segmentOverrides,
         SegmentScoringProps segmentScoring,
         SessionAggregationProps sessionAggregation,
+        UnrecoverableSessionProps unrecoverableSession,
         DecisionLoggingProps decisionLogging
 ) {
 
@@ -59,6 +60,15 @@ public record ProxyRankingProperties(
     ) {
         public SessionAggregationProps {
             if (sessionTimeoutMinutes <= 0) sessionTimeoutMinutes = 15;
+        }
+    }
+
+    public record UnrecoverableSessionProps(
+            boolean enabled,
+            int failureThreshold
+    ) {
+        public UnrecoverableSessionProps {
+            if (failureThreshold <= 0) failureThreshold = 3;
         }
     }
 

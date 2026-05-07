@@ -118,6 +118,9 @@ proxy:
     session-aggregation:
       enabled: ${PROXY_RANKING_SESSION_AGGREGATION_ENABLED:true}
       session-timeout-minutes: ${PROXY_RANKING_SESSION_AGGREGATION_TIMEOUT_MINUTES:15}
+    unrecoverable-session:
+      enabled: ${PROXY_RANKING_UNRECOVERABLE_SESSION_ENABLED:true}
+      failure-threshold: ${PROXY_RANKING_UNRECOVERABLE_SESSION_FAILURE_THRESHOLD:3}
     decision-logging:
       enabled: ${PROXY_RANKING_DECISION_LOGGING_ENABLED:true}
 

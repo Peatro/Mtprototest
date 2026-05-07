@@ -70,7 +70,8 @@ public class RateLimitInterceptor implements HandlerInterceptor {
 
     private boolean isProxyWritePath(String path) {
         return path.matches("^/api(?:/v1|/public)?/proxies/\\d+/feedback$")
-                || path.matches("^/api(?:/v1|/public)?/proxies/\\d+/signal$");
+                || path.matches("^/api(?:/v1|/public)?/proxies/\\d+/signal$")
+                || path.equals("/api/session/diagnostic");
     }
 
     private boolean isPublicProxyReadPath(String path) {

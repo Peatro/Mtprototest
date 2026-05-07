@@ -45,6 +45,7 @@ class RankedProxySelectorTest {
                 )),
                 new ProxyRankingProperties.SegmentScoringProps(false, false, 10, 1.0, 2, 3, 2, 1),
                 new ProxyRankingProperties.SessionAggregationProps(false, 15),
+                new ProxyRankingProperties.UnrecoverableSessionProps(false, 3),
                 new ProxyRankingProperties.DecisionLoggingProps(false)
         );
 
@@ -142,6 +143,7 @@ class RankedProxySelectorTest {
                 new ProxyRankingProperties.SegmentOverridesProps(false, List.of()),
                 new ProxyRankingProperties.SegmentScoringProps(true, false, 10, 1.0, 2, 3, 2, 1),
                 new ProxyRankingProperties.SessionAggregationProps(false, 15),
+                new ProxyRankingProperties.UnrecoverableSessionProps(false, 3),
                 new ProxyRankingProperties.DecisionLoggingProps(false)
         );
         ProxyDecisionLogger logger = new ProxyDecisionLogger(scoringProps, new ObjectMapper());
