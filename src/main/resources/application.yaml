@@ -83,6 +83,27 @@ app:
       api-key: ${APP_ANALYTICS_POSTHOG_API_KEY:}
       host: ${APP_ANALYTICS_POSTHOG_HOST:https://us.i.posthog.com}
 
+proxy:
+  ranking:
+    session-blacklist:
+      enabled: ${PROXY_RANKING_SESSION_BLACKLIST_ENABLED:true}
+      window-minutes: ${PROXY_RANKING_SESSION_BLACKLIST_WINDOW_MINUTES:30}
+      max-history-per-session: ${PROXY_RANKING_SESSION_BLACKLIST_MAX_HISTORY:100}
+      record-top-n: ${PROXY_RANKING_SESSION_BLACKLIST_RECORD_TOP_N:5}
+    segment-overrides:
+      enabled: ${PROXY_RANKING_SEGMENT_OVERRIDES_ENABLED:true}
+      rules:
+        # RU/Windows hard excludes (likely_worked = 0% on 9–16 shows)
+        - { country: RU, os: Windows, proxy-id: 678,  multiplier: 0.0 }
+        - { country: RU, os: Windows, proxy-id: 776,  multiplier: 0.0 }
+        - { country: RU, os: Windows, proxy-id: 883,  multiplier: 0.0 }
+        - { country: RU, os: Windows, proxy-id: 1033, multiplier: 0.0 }
+        # RU/Windows demotes (likely_worked 13–16%, large sample)
+        - { country: RU, os: Windows, proxy-id: 688,  multiplier: 0.3 }
+        - { country: RU, os: Windows, proxy-id: 879,  multiplier: 0.3 }
+    decision-logging:
+      enabled: ${PROXY_RANKING_DECISION_LOGGING_ENABLED:true}
+
   sources:
     entries:
       - name: solispirit
