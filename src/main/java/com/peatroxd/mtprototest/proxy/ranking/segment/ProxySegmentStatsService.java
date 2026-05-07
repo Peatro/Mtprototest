@@ -34,22 +34,28 @@ public class ProxySegmentStatsService {
         Map<SegmentKey, SegmentStats> fresh = new HashMap<>();
         repository.findAll().forEach(e -> fresh.put(
                 new SegmentKey(e.getId().getProxyId(), e.getId().getCountry(), e.getId().getOs()),
-                new SegmentStats(e.getWorkedCount(), e.getFailedCount())
+                new SegmentStats(e.getWorkedCount(), e.getFailedCount(),
+                        e.getLikelyWorkedCount(), e.getNextClickedCount())
         ));
         snapshot = Map.copyOf(fresh);
         log.debug("Segment stats snapshot refreshed: {} entries", fresh.size());
     }
 
+    /**
+     * Records WORKED/FAILED directly to proxy_segment_stats (immediate effect).
+     * OPEN_TELEGRAM and NEXT_CLICKED are handled by the session aggregator.
+     */
     @Transactional
-    public void recordSignal(Long proxyId, String country, String os, SignalEvent event) {
+    public void recordDirectSignal(Long proxyId, String country, String os, SignalEvent event) {
         long worked = event == SignalEvent.WORKED ? 1 : 0;
         long failed = event == SignalEvent.FAILED ? 1 : 0;
         repository.upsertSignal(proxyId, country, os, worked, failed);
     }
 
     /**
-     * Returns a segment multiplier in [0, 1] to be applied to the proxy's base score.
-     * Proxies with insufficient data return the configured neutral multiplier (default 1.0).
+     * Returns a composite segment multiplier in [0, 1] for scoring.
+     * Combines worked, likely_worked (positive) and failed, next_clicked (negative)
+     * with configurable integer weights, then applies Wilson 95% CI lower bound.
      */
     public double getMultiplier(Long proxyId, ClientSegment segment) {
         ProxyRankingProperties.SegmentScoringProps cfg = properties.segmentScoring();
@@ -57,16 +63,19 @@ public class ProxySegmentStatsService {
 
         SegmentKey key = new SegmentKey(proxyId, segment.country(), segment.os());
         SegmentStats stats = snapshot.get(key);
+        if (stats == null) return cfg.unknownProxyMultiplier();
 
-        if (stats == null || stats.sampleSize() < cfg.minSampleSize()) {
-            return cfg.unknownProxyMultiplier();
-        }
-        return WilsonScore.lowerBound(stats.worked(), stats.sampleSize());
+        long successes = stats.workedCount() * cfg.workedWeight()
+                       + stats.likelyWorkedCount() * cfg.likelyWorkedWeight();
+        long failures  = stats.failedCount() * cfg.failedWeight()
+                       + stats.nextClickedCount() * cfg.nextClickedWeight();
+        long total = successes + failures;
+
+        if (total < cfg.minSampleSize()) return cfg.unknownProxyMultiplier();
+        return WilsonScore.lowerBound(successes, total);
     }
 
     record SegmentKey(Long proxyId, String country, String os) {}
 
-    record SegmentStats(long worked, long failed) {
-        long sampleSize() { return worked + failed; }
-    }
+    record SegmentStats(long workedCount, long failedCount, long likelyWorkedCount, long nextClickedCount) {}
 }

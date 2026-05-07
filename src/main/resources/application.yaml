@@ -105,6 +105,15 @@ proxy:
       enabled: ${PROXY_RANKING_SEGMENT_SCORING_ENABLED:true}
       min-sample-size: ${PROXY_RANKING_SEGMENT_SCORING_MIN_SAMPLE_SIZE:10}
       unknown-proxy-multiplier: ${PROXY_RANKING_SEGMENT_SCORING_UNKNOWN_MULTIPLIER:1.0}
+      # Integer weights for composite score: worked and likely_worked count toward success,
+      # failed and next_clicked count toward failure in the Wilson score calculation.
+      worked-weight: ${PROXY_RANKING_SEGMENT_SCORING_WORKED_WEIGHT:2}
+      likely-worked-weight: ${PROXY_RANKING_SEGMENT_SCORING_LIKELY_WORKED_WEIGHT:3}
+      failed-weight: ${PROXY_RANKING_SEGMENT_SCORING_FAILED_WEIGHT:2}
+      next-clicked-weight: ${PROXY_RANKING_SEGMENT_SCORING_NEXT_CLICKED_WEIGHT:1}
+    session-aggregation:
+      enabled: ${PROXY_RANKING_SESSION_AGGREGATION_ENABLED:true}
+      session-timeout-minutes: ${PROXY_RANKING_SESSION_AGGREGATION_TIMEOUT_MINUTES:15}
     decision-logging:
       enabled: ${PROXY_RANKING_DECISION_LOGGING_ENABLED:true}
 

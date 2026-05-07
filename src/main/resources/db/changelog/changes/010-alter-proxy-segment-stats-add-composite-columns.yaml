@@ -1,0 +1,20 @@
+databaseChangeLog:
+  - changeSet:
+      id: 010-alter-proxy-segment-stats-add-composite-columns
+      author: PeatroXD
+      changes:
+        - addColumn:
+            tableName: proxy_segment_stats
+            columns:
+              - column:
+                  name: likely_worked_count
+                  type: BIGINT
+                  defaultValueNumeric: 0
+                  constraints:
+                    nullable: false
+              - column:
+                  name: next_clicked_count
+                  type: BIGINT
+                  defaultValueNumeric: 0
+                  constraints:
+                    nullable: false

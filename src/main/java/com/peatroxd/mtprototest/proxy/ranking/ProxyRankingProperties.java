@@ -9,6 +9,7 @@ public record ProxyRankingProperties(
         SessionBlacklistProps sessionBlacklist,
         SegmentOverridesProps segmentOverrides,
         SegmentScoringProps segmentScoring,
+        SessionAggregationProps sessionAggregation,
         DecisionLoggingProps decisionLogging
 ) {
 
@@ -35,11 +36,28 @@ public record ProxyRankingProperties(
     public record SegmentScoringProps(
             boolean enabled,
             int minSampleSize,
-            double unknownProxyMultiplier
+            double unknownProxyMultiplier,
+            int workedWeight,
+            int likelyWorkedWeight,
+            int failedWeight,
+            int nextClickedWeight
     ) {
         public SegmentScoringProps {
             if (minSampleSize <= 0) minSampleSize = 10;
             if (unknownProxyMultiplier < 0 || unknownProxyMultiplier > 1) unknownProxyMultiplier = 1.0;
+            if (workedWeight <= 0) workedWeight = 2;
+            if (likelyWorkedWeight <= 0) likelyWorkedWeight = 3;
+            if (failedWeight <= 0) failedWeight = 2;
+            if (nextClickedWeight <= 0) nextClickedWeight = 1;
+        }
+    }
+
+    public record SessionAggregationProps(
+            boolean enabled,
+            int sessionTimeoutMinutes
+    ) {
+        public SessionAggregationProps {
+            if (sessionTimeoutMinutes <= 0) sessionTimeoutMinutes = 15;
         }
     }
 

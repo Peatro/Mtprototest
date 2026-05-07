@@ -23,6 +23,12 @@ public class ProxySegmentStatsEntity {
     @Column(name = "failed_count", nullable = false)
     private long failedCount;
 
+    @Column(name = "likely_worked_count", nullable = false)
+    private long likelyWorkedCount;
+
+    @Column(name = "next_clicked_count", nullable = false)
+    private long nextClickedCount;
+
     @Column(name = "updated_at", nullable = false)
     private LocalDateTime updatedAt;
 }
