@@ -103,6 +103,10 @@ proxy:
         - { country: RU, os: Windows, proxy-id: 879,  multiplier: 0.3 }
     segment-scoring:
       enabled: ${PROXY_RANKING_SEGMENT_SCORING_ENABLED:true}
+      # When true: Thompson sampling (Beta distribution) replaces Wilson score.
+      # Unknown proxies get Beta(1,1)=Uniform — full exploration, no manual tuning.
+      # When false: deterministic Wilson 95% CI lower bound (Phase 2/3 behaviour).
+      use-thompson-sampling: ${PROXY_RANKING_SEGMENT_SCORING_THOMPSON:false}
       min-sample-size: ${PROXY_RANKING_SEGMENT_SCORING_MIN_SAMPLE_SIZE:10}
       unknown-proxy-multiplier: ${PROXY_RANKING_SEGMENT_SCORING_UNKNOWN_MULTIPLIER:1.0}
       # Integer weights for composite score: worked and likely_worked count toward success,

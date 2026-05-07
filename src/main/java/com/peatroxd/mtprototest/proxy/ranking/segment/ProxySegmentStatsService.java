@@ -54,8 +54,14 @@ public class ProxySegmentStatsService {
 
     /**
      * Returns a composite segment multiplier in [0, 1] for scoring.
-     * Combines worked, likely_worked (positive) and failed, next_clicked (negative)
-     * with configurable integer weights, then applies Wilson 95% CI lower bound.
+     *
+     * Two modes:
+     * - Thompson sampling (useThompsonSampling=true): samples θ from Beta(α, β) where
+     *   α = weightedSuccesses + 1, β = weightedFailures + 1. Unknown proxies get
+     *   Beta(1,1) = Uniform(0,1) for natural exploration. NON-DETERMINISTIC.
+     * - Wilson mode: returns the 95% CI lower bound deterministically.
+     *
+     * Callers must pre-compute multipliers ONCE per request to ensure sort stability.
      */
     public double getMultiplier(Long proxyId, ClientSegment segment) {
         ProxyRankingProperties.SegmentScoringProps cfg = properties.segmentScoring();
@@ -63,15 +69,22 @@ public class ProxySegmentStatsService {
 
         SegmentKey key = new SegmentKey(proxyId, segment.country(), segment.os());
         SegmentStats stats = snapshot.get(key);
-        if (stats == null) return cfg.unknownProxyMultiplier();
 
-        long successes = stats.workedCount() * cfg.workedWeight()
-                       + stats.likelyWorkedCount() * cfg.likelyWorkedWeight();
-        long failures  = stats.failedCount() * cfg.failedWeight()
-                       + stats.nextClickedCount() * cfg.nextClickedWeight();
+        long successes = stats == null ? 0
+                : stats.workedCount() * cfg.workedWeight()
+                + stats.likelyWorkedCount() * cfg.likelyWorkedWeight();
+        long failures = stats == null ? 0
+                : stats.failedCount() * cfg.failedWeight()
+                + stats.nextClickedCount() * cfg.nextClickedWeight();
+
+        if (cfg.useThompsonSampling()) {
+            // Alpha = successes + 1, Beta = failures + 1 (uniform prior for no data)
+            return BetaSampler.sample(successes + 1.0, failures + 1.0);
+        }
+
+        // Wilson mode: fall back to unknown multiplier if below min sample size
         long total = successes + failures;
-
-        if (total < cfg.minSampleSize()) return cfg.unknownProxyMultiplier();
+        if (stats == null || total < cfg.minSampleSize()) return cfg.unknownProxyMultiplier();
         return WilsonScore.lowerBound(successes, total);
     }
 

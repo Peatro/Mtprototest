@@ -35,6 +35,7 @@ public record ProxyRankingProperties(
 
     public record SegmentScoringProps(
             boolean enabled,
+            boolean useThompsonSampling,
             int minSampleSize,
             double unknownProxyMultiplier,
             int workedWeight,

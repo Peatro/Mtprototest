@@ -10,6 +10,7 @@ import org.springframework.stereotype.Service;
 
 import java.util.ArrayList;
 import java.util.Comparator;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -149,9 +150,15 @@ public class RankedProxySelector {
 
     private List<ProxyResponse> applySegmentScoring(List<ProxyResponse> candidates, ClientSegment segment) {
         if (!properties.segmentScoring().enabled()) return candidates;
+        // Pre-compute once per request: getMultiplier may be stochastic (Thompson sampling),
+        // so calling it inside a Comparator would violate the contract and corrupt sort order.
+        Map<Long, Double> multipliers = new HashMap<>(candidates.size());
+        for (ProxyResponse p : candidates) {
+            multipliers.put(p.id(), segmentStatsService.getMultiplier(p.id(), segment));
+        }
         return candidates.stream()
                 .sorted(Comparator.comparingDouble((ProxyResponse p) ->
-                        p.score() * segmentStatsService.getMultiplier(p.id(), segment)
+                        p.score() * multipliers.getOrDefault(p.id(), 1.0)
                 ).reversed())
                 .toList();
     }

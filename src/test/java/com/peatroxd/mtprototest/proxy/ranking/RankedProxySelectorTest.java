@@ -43,7 +43,7 @@ class RankedProxySelectorTest {
                         new ProxyRankingProperties.SegmentOverridesProps.OverrideRule("RU", "Windows", 688L,  0.3),
                         new ProxyRankingProperties.SegmentOverridesProps.OverrideRule("RU", "Windows", 879L,  0.3)
                 )),
-                new ProxyRankingProperties.SegmentScoringProps(false, 10, 1.0, 2, 3, 2, 1),
+                new ProxyRankingProperties.SegmentScoringProps(false, false, 10, 1.0, 2, 3, 2, 1),
                 new ProxyRankingProperties.SessionAggregationProps(false, 15),
                 new ProxyRankingProperties.DecisionLoggingProps(false)
         );
@@ -140,7 +140,7 @@ class RankedProxySelectorTest {
         ProxyRankingProperties scoringProps = new ProxyRankingProperties(
                 new ProxyRankingProperties.SessionBlacklistProps(false, 30, 100, 5),
                 new ProxyRankingProperties.SegmentOverridesProps(false, List.of()),
-                new ProxyRankingProperties.SegmentScoringProps(true, 10, 1.0, 2, 3, 2, 1),
+                new ProxyRankingProperties.SegmentScoringProps(true, false, 10, 1.0, 2, 3, 2, 1),
                 new ProxyRankingProperties.SessionAggregationProps(false, 15),
                 new ProxyRankingProperties.DecisionLoggingProps(false)
         );
