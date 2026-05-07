@@ -101,6 +101,10 @@ proxy:
         # RU/Windows demotes (likely_worked 13–16%, large sample)
         - { country: RU, os: Windows, proxy-id: 688,  multiplier: 0.3 }
         - { country: RU, os: Windows, proxy-id: 879,  multiplier: 0.3 }
+    segment-scoring:
+      enabled: ${PROXY_RANKING_SEGMENT_SCORING_ENABLED:true}
+      min-sample-size: ${PROXY_RANKING_SEGMENT_SCORING_MIN_SAMPLE_SIZE:10}
+      unknown-proxy-multiplier: ${PROXY_RANKING_SEGMENT_SCORING_UNKNOWN_MULTIPLIER:1.0}
     decision-logging:
       enabled: ${PROXY_RANKING_DECISION_LOGGING_ENABLED:true}
 

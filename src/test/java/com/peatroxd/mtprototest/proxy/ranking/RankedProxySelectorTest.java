@@ -2,6 +2,7 @@ package com.peatroxd.mtprototest.proxy.ranking;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.peatroxd.mtprototest.proxy.dto.response.ProxyResponse;
+import com.peatroxd.mtprototest.proxy.ranking.segment.ProxySegmentStatsService;
 import com.peatroxd.mtprototest.proxy.service.ProxyService;
 import jakarta.servlet.http.HttpServletRequest;
 import org.junit.jupiter.api.BeforeEach;
@@ -14,6 +15,8 @@ import java.util.List;
 import java.util.stream.LongStream;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
@@ -21,6 +24,7 @@ class RankedProxySelectorTest {
 
     @Mock private ProxyService proxyService;
     @Mock private HttpServletRequest request;
+    @Mock private ProxySegmentStatsService segmentStatsService;
 
     private RankedProxySelector selector;
 
@@ -39,6 +43,7 @@ class RankedProxySelectorTest {
                         new ProxyRankingProperties.SegmentOverridesProps.OverrideRule("RU", "Windows", 688L,  0.3),
                         new ProxyRankingProperties.SegmentOverridesProps.OverrideRule("RU", "Windows", 879L,  0.3)
                 )),
+                new ProxyRankingProperties.SegmentScoringProps(false, 10, 1.0),
                 new ProxyRankingProperties.DecisionLoggingProps(false)
         );
 
@@ -47,7 +52,7 @@ class RankedProxySelectorTest {
         UserAgentParser uaParser = new UserAgentParser();
         ProxyDecisionLogger logger = new ProxyDecisionLogger(props, new ObjectMapper());
 
-        selector = new RankedProxySelector(proxyService, blacklist, geoIp, uaParser, logger, props);
+        selector = new RankedProxySelector(proxyService, blacklist, geoIp, uaParser, logger, props, segmentStatsService);
     }
 
     // ── Segment overrides ──────────────────────────────────────────────────
@@ -124,6 +129,52 @@ class RankedProxySelectorTest {
         List<Long> ids = getResultIds();
 
         assertThat(ids).containsExactlyInAnyOrder(678L, 776L);
+    }
+
+    // ── Segment scoring ────────────────────────────────────────────────────
+
+    @Test
+    void segmentScoringReordersProxiesWhenEnabled() {
+        // Build a selector with scoring enabled
+        ProxyRankingProperties scoringProps = new ProxyRankingProperties(
+                new ProxyRankingProperties.SessionBlacklistProps(false, 30, 100, 5),
+                new ProxyRankingProperties.SegmentOverridesProps(false, List.of()),
+                new ProxyRankingProperties.SegmentScoringProps(true, 10, 1.0),
+                new ProxyRankingProperties.DecisionLoggingProps(false)
+        );
+        ProxyDecisionLogger logger = new ProxyDecisionLogger(scoringProps, new ObjectMapper());
+        RankedProxySelector scoringSelector = new RankedProxySelector(
+                proxyService,
+                new SessionBlacklistService(scoringProps),
+                new GeoIpResolver(),
+                new UserAgentParser(),
+                logger,
+                scoringProps,
+                segmentStatsService
+        );
+
+        // Proxy 10 has score 80, proxy 20 has score 80 — equal base scores
+        List<ProxyResponse> proxies = List.of(
+                ProxyResponse.builder().id(10L).host("h10").port(443).secret("s").type("MTPROTO")
+                        .source("t").status("ALIVE").verificationStatus("VERIFIED").score(80)
+                        .consecutiveFailures(0).consecutiveSuccesses(1).verified(true).build(),
+                ProxyResponse.builder().id(20L).host("h20").port(443).secret("s").type("MTPROTO")
+                        .source("t").status("ALIVE").verificationStatus("VERIFIED").score(80)
+                        .consecutiveFailures(0).consecutiveSuccesses(1).verified(true).build()
+        );
+        when(proxyService.getBest()).thenReturn(proxies);
+        when(request.getHeader("CF-IPCountry")).thenReturn("DE");
+        when(request.getHeader("User-Agent")).thenReturn(WINDOWS_UA);
+
+        // Proxy 20 is known-good (multiplier 0.9), proxy 10 is unknown (neutral 1.0) — 10 stays first
+        when(segmentStatsService.getMultiplier(eq(10L), any())).thenReturn(1.0);
+        when(segmentStatsService.getMultiplier(eq(20L), any())).thenReturn(0.9);
+
+        List<Long> ids = scoringSelector.getBestForClient(request, "c")
+                .stream().map(ProxyResponse::id).toList();
+
+        assertThat(ids.get(0)).isEqualTo(10L);
+        assertThat(ids.get(1)).isEqualTo(20L);
     }
 
     // ── Helpers ────────────────────────────────────────────────────────────

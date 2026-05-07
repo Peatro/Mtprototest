@@ -1,0 +1,52 @@
+databaseChangeLog:
+  - changeSet:
+      id: 009-create-proxy-segment-stats
+      author: PeatroXD
+      changes:
+        - createTable:
+            tableName: proxy_segment_stats
+            columns:
+              - column:
+                  name: proxy_id
+                  type: BIGINT
+                  constraints:
+                    nullable: false
+              - column:
+                  name: country
+                  type: VARCHAR(10)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: os
+                  type: VARCHAR(20)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: worked_count
+                  type: BIGINT
+                  defaultValueNumeric: 0
+                  constraints:
+                    nullable: false
+              - column:
+                  name: failed_count
+                  type: BIGINT
+                  defaultValueNumeric: 0
+                  constraints:
+                    nullable: false
+              - column:
+                  name: updated_at
+                  type: TIMESTAMP
+                  defaultValueComputed: CURRENT_TIMESTAMP
+                  constraints:
+                    nullable: false
+        - addPrimaryKey:
+            tableName: proxy_segment_stats
+            columnNames: proxy_id, country, os
+            constraintName: pk_proxy_segment_stats
+        - addForeignKeyConstraint:
+            baseTableName: proxy_segment_stats
+            baseColumnNames: proxy_id
+            referencedTableName: proxies
+            referencedColumnNames: id
+            constraintName: fk_segment_stats_proxy
+            onDelete: CASCADE

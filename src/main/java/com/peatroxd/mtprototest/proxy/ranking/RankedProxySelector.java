@@ -1,6 +1,7 @@
 package com.peatroxd.mtprototest.proxy.ranking;
 
 import com.peatroxd.mtprototest.proxy.dto.response.ProxyResponse;
+import com.peatroxd.mtprototest.proxy.ranking.segment.ProxySegmentStatsService;
 import com.peatroxd.mtprototest.proxy.service.ProxyService;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
@@ -8,6 +9,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -24,6 +26,7 @@ public class RankedProxySelector {
     private final UserAgentParser userAgentParser;
     private final ProxyDecisionLogger decisionLogger;
     private final ProxyRankingProperties properties;
+    private final ProxySegmentStatsService segmentStatsService;
 
     public List<ProxyResponse> getBestForClient(HttpServletRequest request, String clientKey) {
         List<ProxyResponse> candidates = proxyService.getBest();
@@ -37,7 +40,9 @@ public class RankedProxySelector {
         List<ProxyResponse> afterOverrides = applySegmentOverrides(
                 afterBlacklist, segment, excludedByOverrides, demotedByOverrides);
 
-        Long selectedId = afterOverrides.isEmpty() ? null : afterOverrides.get(0).id();
+        List<ProxyResponse> afterScoring = applySegmentScoring(afterOverrides, segment);
+
+        Long selectedId = afterScoring.isEmpty() ? null : afterScoring.get(0).id();
         String reason = resolveReason(candidates, afterBlacklist, afterOverrides);
 
         decisionLogger.log(new ProxyDecisionLogger.DecisionContext(
@@ -50,12 +55,13 @@ public class RankedProxySelector {
                 reason,
                 new ArrayList<>(blacklisted),
                 excludedByOverrides,
-                demotedByOverrides
+                demotedByOverrides,
+                properties.segmentScoring().enabled()
         ));
 
-        recordShownSafely(clientKey, afterOverrides);
+        recordShownSafely(clientKey, afterScoring);
 
-        return afterOverrides;
+        return afterScoring;
     }
 
     // ── private helpers ──────────────────────────────────────────────────────
@@ -139,6 +145,15 @@ public class RankedProxySelector {
         } catch (Exception e) {
             log.warn("Session blacklist write failed, continuing", e);
         }
+    }
+
+    private List<ProxyResponse> applySegmentScoring(List<ProxyResponse> candidates, ClientSegment segment) {
+        if (!properties.segmentScoring().enabled()) return candidates;
+        return candidates.stream()
+                .sorted(Comparator.comparingDouble((ProxyResponse p) ->
+                        p.score() * segmentStatsService.getMultiplier(p.id(), segment)
+                ).reversed())
+                .toList();
     }
 
     private String resolveReason(

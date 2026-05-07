@@ -38,6 +38,7 @@ public class ProxyDecisionLogger {
             String selectionReason,
             List<Long> blacklistedIds,
             List<Long> excludedByOverrides,
-            List<Long> demotedByOverrides
+            List<Long> demotedByOverrides,
+            boolean segmentScoringActive
     ) {}
 }
