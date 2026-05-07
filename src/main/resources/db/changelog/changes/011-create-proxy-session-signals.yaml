@@ -1,0 +1,59 @@
+databaseChangeLog:
+  - changeSet:
+      id: 011-create-proxy-session-signals
+      author: PeatroXD
+      changes:
+        - createTable:
+            tableName: proxy_session_signals
+            columns:
+              - column:
+                  name: id
+                  type: BIGSERIAL
+                  constraints:
+                    primaryKey: true
+                    nullable: false
+              - column:
+                  name: session_id
+                  type: VARCHAR(128)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: proxy_id
+                  type: BIGINT
+                  constraints:
+                    nullable: false
+              - column:
+                  name: event
+                  type: VARCHAR(20)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: country
+                  type: VARCHAR(10)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: os
+                  type: VARCHAR(20)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: occurred_at
+                  type: TIMESTAMP
+                  defaultValueComputed: CURRENT_TIMESTAMP
+                  constraints:
+                    nullable: false
+        - createIndex:
+            tableName: proxy_session_signals
+            indexName: idx_session_signals_session_occurred
+            columns:
+              - column:
+                  name: session_id
+              - column:
+                  name: occurred_at
+        - createIndex:
+            tableName: proxy_session_signals
+            indexName: idx_session_signals_occurred_at
+            columns:
+              - column:
+                  name: occurred_at

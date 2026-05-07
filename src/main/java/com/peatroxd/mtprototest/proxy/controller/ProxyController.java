@@ -10,6 +10,7 @@ import com.peatroxd.mtprototest.proxy.dto.response.ProxyStatsResponse;
 import com.peatroxd.mtprototest.proxy.dto.response.ProxyTelegramLinkDto;
 import com.peatroxd.mtprototest.proxy.enums.ProxyStatus;
 import com.peatroxd.mtprototest.proxy.enums.ProxyVerificationStatus;
+import com.peatroxd.mtprototest.proxy.ranking.RankedProxySelector;
 import com.peatroxd.mtprototest.proxy.service.ProxyFeedbackService;
 import com.peatroxd.mtprototest.proxy.service.ProxyService;
 import jakarta.servlet.http.HttpServletRequest;
@@ -42,6 +43,7 @@ public class ProxyController {
     private final ProxyService proxyService;
     private final ProxyFeedbackService proxyFeedbackService;
     private final ClientRequestKeyResolver clientRequestKeyResolver;
+    private final RankedProxySelector rankedProxySelector;
 
     @GetMapping
     public ProxyPageResponse getProxies(
@@ -78,8 +80,10 @@ public class ProxyController {
     }
 
     @GetMapping("/best")
-    public List<ProxyResponse> best() {
-        return proxyService.getBest();
+    public List<ProxyResponse> best(HttpServletRequest httpServletRequest) {
+        return rankedProxySelector.getBestForClient(
+                httpServletRequest,
+                clientRequestKeyResolver.resolve(httpServletRequest));
     }
 
     @GetMapping("/best-links")

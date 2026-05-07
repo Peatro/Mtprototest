@@ -2,6 +2,7 @@ package com.peatroxd.mtprototest.api;
 
 import com.peatroxd.mtprototest.common.web.ClientRequestKeyResolver;
 import com.peatroxd.mtprototest.proxy.controller.ProxyController;
+import com.peatroxd.mtprototest.proxy.ranking.RankedProxySelector;
 import com.peatroxd.mtprototest.proxy.service.ProxyFeedbackService;
 import com.peatroxd.mtprototest.proxy.service.ProxyService;
 import org.junit.jupiter.api.Test;
@@ -15,7 +16,8 @@ class ProxyControllerValidationTest {
     private final ProxyController controller = new ProxyController(
             Mockito.mock(ProxyService.class),
             Mockito.mock(ProxyFeedbackService.class),
-            new ClientRequestKeyResolver()
+            new ClientRequestKeyResolver(),
+            Mockito.mock(RankedProxySelector.class)
     );
 
     @Test

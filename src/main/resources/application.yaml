@@ -83,6 +83,47 @@ app:
       api-key: ${APP_ANALYTICS_POSTHOG_API_KEY:}
       host: ${APP_ANALYTICS_POSTHOG_HOST:https://us.i.posthog.com}
 
+proxy:
+  ranking:
+    session-blacklist:
+      enabled: ${PROXY_RANKING_SESSION_BLACKLIST_ENABLED:true}
+      window-minutes: ${PROXY_RANKING_SESSION_BLACKLIST_WINDOW_MINUTES:30}
+      max-history-per-session: ${PROXY_RANKING_SESSION_BLACKLIST_MAX_HISTORY:100}
+      record-top-n: ${PROXY_RANKING_SESSION_BLACKLIST_RECORD_TOP_N:5}
+    segment-overrides:
+      enabled: ${PROXY_RANKING_SEGMENT_OVERRIDES_ENABLED:true}
+      rules:
+        # RU/Windows hard excludes (likely_worked = 0% on 9–16 shows)
+        - { country: RU, os: Windows, proxy-id: 678,  multiplier: 0.0 }
+        - { country: RU, os: Windows, proxy-id: 776,  multiplier: 0.0 }
+        - { country: RU, os: Windows, proxy-id: 883,  multiplier: 0.0 }
+        - { country: RU, os: Windows, proxy-id: 1033, multiplier: 0.0 }
+        # RU/Windows demotes (likely_worked 13–16%, large sample)
+        - { country: RU, os: Windows, proxy-id: 688,  multiplier: 0.3 }
+        - { country: RU, os: Windows, proxy-id: 879,  multiplier: 0.3 }
+    segment-scoring:
+      enabled: ${PROXY_RANKING_SEGMENT_SCORING_ENABLED:true}
+      # When true: Thompson sampling (Beta distribution) replaces Wilson score.
+      # Unknown proxies get Beta(1,1)=Uniform — full exploration, no manual tuning.
+      # When false: deterministic Wilson 95% CI lower bound (Phase 2/3 behaviour).
+      use-thompson-sampling: ${PROXY_RANKING_SEGMENT_SCORING_THOMPSON:false}
+      min-sample-size: ${PROXY_RANKING_SEGMENT_SCORING_MIN_SAMPLE_SIZE:10}
+      unknown-proxy-multiplier: ${PROXY_RANKING_SEGMENT_SCORING_UNKNOWN_MULTIPLIER:1.0}
+      # Integer weights for composite score: worked and likely_worked count toward success,
+      # failed and next_clicked count toward failure in the Wilson score calculation.
+      worked-weight: ${PROXY_RANKING_SEGMENT_SCORING_WORKED_WEIGHT:2}
+      likely-worked-weight: ${PROXY_RANKING_SEGMENT_SCORING_LIKELY_WORKED_WEIGHT:3}
+      failed-weight: ${PROXY_RANKING_SEGMENT_SCORING_FAILED_WEIGHT:2}
+      next-clicked-weight: ${PROXY_RANKING_SEGMENT_SCORING_NEXT_CLICKED_WEIGHT:1}
+    session-aggregation:
+      enabled: ${PROXY_RANKING_SESSION_AGGREGATION_ENABLED:true}
+      session-timeout-minutes: ${PROXY_RANKING_SESSION_AGGREGATION_TIMEOUT_MINUTES:15}
+    unrecoverable-session:
+      enabled: ${PROXY_RANKING_UNRECOVERABLE_SESSION_ENABLED:true}
+      failure-threshold: ${PROXY_RANKING_UNRECOVERABLE_SESSION_FAILURE_THRESHOLD:3}
+    decision-logging:
+      enabled: ${PROXY_RANKING_DECISION_LOGGING_ENABLED:true}
+
   sources:
     entries:
       - name: solispirit
